@@ -6,8 +6,17 @@
     <title>祝日チェッカー</title>
     <style>
         body {
-            font-family: sans-serif;
+            font-family: 'Arial', sans-serif;
             margin: 2em;
+            background: linear-gradient(135deg, #f0f8ff, #e6e6fa);
+            color: #333;
+        }
+
+        h1 {
+            font-size: 2rem;
+            text-align: center;
+            color: #4b0082;
+            text-shadow: 1px 1px 2px #aaa;
         }
 
         label,
@@ -18,48 +27,124 @@
         }
 
         #controls {
-            margin-bottom: 0.5em;
+            margin-bottom: 1em;
+            text-align: center;
+        }
+
+        #controls div {
+            margin-bottom: 1em;
         }
 
         #controls button {
             margin-left: 0.5em;
+            padding: 0.5em 1em;
+            border: none;
+            border-radius: 5px;
+            background-color: #4b0082;
+            color: white;
+            cursor: pointer;
+            transition: background-color 0.3s ease, transform 0.2s ease;
+        }
+
+        #controls button:hover {
+            background-color: #6a0dad;
+            transform: scale(1.05);
         }
 
         #timestamp {
             margin-bottom: 0.5em;
             color: #555;
+            text-align: center;
+            font-style: italic;
         }
 
         #result {
             margin-top: 1em;
             font-weight: bold;
+            text-align: center;
+            font-size: 1.2rem;
         }
 
         #monthHolidays {
             margin-top: 1.5em;
+            text-align: center;
         }
 
         #monthHolidays h2 {
-            font-size: 1.1rem;
-            margin-bottom: 0.3em;
+            font-size: 1.3rem;
+            margin-bottom: 0.5em;
+            color: #4b0082;
+            text-shadow: 1px 1px 2px #aaa;
         }
 
         #monthHolidays ul {
             padding-left: 1.2em;
+            list-style: none;
+            text-align: left;
+            display: inline-block;
+        }
+
+        #monthHolidays ul li {
+            margin-bottom: 0.3em;
+            padding: 0.3em;
+            background: #f8f8ff;
+            border-radius: 5px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
         }
 
         #source {
             margin-top: 2em;
             font-size: 0.9rem;
+            text-align: center;
         }
 
         #source a {
-            color: #006;
+            color: #4b0082;
             text-decoration: none;
         }
 
         #source a:hover {
             text-decoration: underline;
+        }
+
+        /* ダークモード対応 */
+        @media (prefers-color-scheme: dark) {
+            body {
+                background: linear-gradient(135deg, #2c2c54, #1e1e2f);
+                color: #ddd;
+            }
+
+            h1 {
+                color: #a29bfe;
+                text-shadow: 1px 1px 2px #000;
+            }
+
+            #controls button {
+                background-color: #6c5ce7;
+                color: #fff;
+            }
+
+            #controls button:hover {
+                background-color: #a29bfe;
+            }
+
+            #timestamp {
+                color: #aaa;
+            }
+
+            #monthHolidays ul li {
+                background: #3a3a5c;
+                box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+            }
+
+            #source a {
+                color: #a29bfe;
+            }
+
+            #monthHolidays h2 {
+                color: #a29bfe;
+                text-shadow: 1px 1px 2px #000;
+            }
         }
     </style>
 </head>
@@ -71,13 +156,17 @@
     <div id="timestamp"></div>
 
     <div id="controls">
-        <label for="datePicker">日付を選択：</label>
-        <input type="date" id="datePicker" />
-        <button id="prevMonthBtn">前月同日</button>
-        <button id="prevDayBtn">前日</button>
-        <button id="todayBtn">今日</button>
-        <button id="nextDayBtn">翌日</button>
-        <button id="nextMonthBtn">翌月同日</button>
+        <div>
+            <label for="datePicker">日付を選択：</label>
+            <input type="date" id="datePicker" />
+        </div>
+        <div>
+            <button id="prevMonthBtn">前月同日</button>
+            <button id="prevDayBtn">前日</button>
+            <button id="todayBtn">今日</button>
+            <button id="nextDayBtn">翌日</button>
+            <button id="nextMonthBtn">翌月同日</button>
+        </div>
     </div>
 
     <div id="result"></div>
