@@ -290,8 +290,14 @@
                 picker.value = d.toISOString().slice(0, 10);
                 update();
             }
+            function getLocalDate() {
+                const now = new Date();
+                const offset = now.getTimezoneOffset() * 60000; // ミリ秒単位のタイムゾーンオフセット
+                return new Date(now.getTime() - offset).toISOString().slice(0, 10);
+            }
+
             function goToday() {
-                picker.value = new Date().toISOString().slice(0, 10);
+                picker.value = getLocalDate();
                 update();
             }
 
@@ -304,7 +310,7 @@
             picker.addEventListener('change', update);
 
             // 初期設定
-            picker.value = new Date().toISOString().slice(0, 10);
+            picker.value = getLocalDate();
             update();
         })();
     </script>
