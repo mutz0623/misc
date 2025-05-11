@@ -52,7 +52,6 @@
         }
 
         #timestamp {
-            margin-bottom: 0.5em;
             color: #555;
             text-align: center;
             font-style: italic;
@@ -93,7 +92,7 @@
         }
 
         #source {
-            margin-top: 2em;
+            margin-top: 0em;
             font-size: 0.9rem;
             text-align: center;
         }
@@ -146,14 +145,18 @@
                 text-shadow: 1px 1px 2px #000;
             }
         }
+
+        footer {
+            text-align: center;
+            margin-top: 2em;
+            font-size: 0.9rem;
+            color: #555;
+        }
     </style>
 </head>
 
 <body>
     <h1>祝日チェッカー</h1>
-
-    <!-- CSV の最終更新日時 -->
-    <div id="timestamp"></div>
 
     <div id="controls">
         <div>
@@ -176,6 +179,9 @@
         <ul id="monthList"></ul>
     </div>
 
+    <!-- CSV の最終更新日時 -->
+    <div id="timestamp"></div>
+
     <!-- 取得元リンク -->
     <div id="source">
         祝日CSV取得元：
@@ -183,6 +189,11 @@
             内閣府「国民の祝日」概要ページ
         </a>
     </div>
+
+    <!-- 著作権表記 -->
+    <footer>
+        &copy; 2025 Iwata M. All rights reserved.
+    </footer>
 
     <script>
         (async () => {
