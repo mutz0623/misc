@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>現在時刻のQRコード表示</title>
+  <!-- QRCode.js を jsDelivr から読み込む -->
+  <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+  <style>
+    body {
+      font-family: sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      background: #f5f5f5;
+      margin: 0;
+    }
+    #qrcode {
+      /* 任意でサイズ調整 */
+      width: 200px;
+      height: 200px;
+    }
+  </style>
+</head>
+<body>
+  <div id="qrcode"></div>
+
+  <script>
+    /**
+     * 現在時刻を取得し、QRコードを更新する関数
+     */
+    function updateQRCode() {
+      const now = new Date();
+      const timeString = now.toLocaleTimeString('ja-JP', {
+        hour12: false,
+        hour:   '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
+      });
+
+      // QR コンテナをクリア
+      const container = document.getElementById('qrcode');
+      container.innerHTML = '';
+
+      // QR コード生成（内容は時刻文字列）
+      new QRCode(container, {
+        text:         timeString,
+        width:        200,
+        height:       200,
+        colorDark:    '#000',
+        colorLight:   '#fff',
+        correctLevel: QRCode.CorrectLevel.H
+      });
+    }
+
+    // 初回実行＋1秒ごとに更新
+    updateQRCode();
+    setInterval(updateQRCode, 1000);
+  </script>
+</body>
+</html>
