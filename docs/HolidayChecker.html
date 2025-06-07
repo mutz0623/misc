@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <title>祝日チェッカー</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            margin: 2em;
+            background: linear-gradient(135deg, #f0f8ff, #e6e6fa);
+            color: #333;
+        }
+
+        h1 {
+            font-size: 2rem;
+            text-align: center;
+            color: #4b0082;
+            text-shadow: 1px 1px 2px #aaa;
+        }
+
+        label,
+        input,
+        button {
+            font-size: 1rem;
+            vertical-align: middle;
+        }
+
+        #controls {
+            margin-bottom: 1em;
+            text-align: center;
+        }
+
+        #controls div {
+            margin-bottom: 1em;
+        }
+
+        #controls button {
+            margin-left: 0.5em;
+            padding: 0.5em 1em;
+            border: none;
+            border-radius: 5px;
+            background-color: #4b0082;
+            color: white;
+            cursor: pointer;
+            transition: background-color 0.3s ease, transform 0.2s ease;
+        }
+
+        #controls button:hover {
+            background-color: #6a0dad;
+            transform: scale(1.05);
+        }
+
+        #timestamp {
+            color: #555;
+            text-align: center;
+            font-style: italic;
+            font-size: 0.9rem;
+        }
+
+        #result {
+            margin-top: 1em;
+            font-weight: bold;
+            text-align: center;
+            font-size: 1.2rem;
+        }
+
+        #monthHolidays {
+            margin-top: 1.5em;
+            text-align: center;
+        }
+
+        #monthHolidays h2 {
+            font-size: 1.3rem;
+            margin-bottom: 0.5em;
+            color: #4b0082;
+            text-shadow: 1px 1px 2px #aaa;
+        }
+
+        #monthHolidays ul {
+            padding-left: 1.2em;
+            list-style: none;
+            text-align: left;
+            display: inline-block;
+        }
+
+        #monthHolidays ul li {
+            margin-bottom: 0.3em;
+            padding: 0.3em;
+            background: #f8f8ff;
+            border-radius: 5px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        #source {
+            margin-top: 0em;
+            font-size: 0.9rem;
+            text-align: center;
+        }
+
+        #source a {
+            color: #4b0082;
+            text-decoration: none;
+        }
+
+        #source a:hover {
+            text-decoration: underline;
+        }
+
+        /* ダークモード対応 */
+        @media (prefers-color-scheme: dark) {
+            body {
+                background: linear-gradient(135deg, #2c2c54, #1e1e2f);
+                color: #ddd;
+            }
+
+            h1 {
+                color: #a29bfe;
+                text-shadow: 1px 1px 2px #000;
+            }
+
+            #controls button {
+                background-color: #6c5ce7;
+                color: #fff;
+            }
+
+            #controls button:hover {
+                background-color: #a29bfe;
+            }
+
+            #timestamp {
+                color: #aaa;
+            }
+
+            #monthHolidays ul li {
+                background: #3a3a5c;
+                box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+            }
+
+            #source a {
+                color: #a29bfe;
+            }
+
+            #monthHolidays h2 {
+                color: #a29bfe;
+                text-shadow: 1px 1px 2px #000;
+            }
+        }
+
+        footer {
+            text-align: center;
+            margin-top: 2em;
+            font-size: 0.9rem;
+            color: #555;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>祝日チェッカー</h1>
+
+    <div id="controls">
+        <div>
+            <label for="datePicker">日付を選択：</label>
+            <input type="date" id="datePicker" />
+        </div>
+        <div>
+            <button id="prevMonthBtn">前月同日</button>
+            <button id="prevDayBtn">前日</button>
+            <button id="todayBtn">今日</button>
+            <button id="nextDayBtn">翌日</button>
+            <button id="nextMonthBtn">翌月同日</button>
+        </div>
+    </div>
+
+    <div id="result"></div>
+
+    <div id="monthHolidays">
+        <h2 id="monthTitle"></h2>
+        <ul id="monthList"></ul>
+    </div>
+
+    <!-- CSV の最終更新日時 -->
+    <div id="timestamp"></div>
+
+    <!-- 取得元リンク -->
+    <div id="source">
+        祝日CSV取得元：
+        <a href="https://www8.cao.go.jp/chosei/shukujitsu/gaiyou.html" target="_blank" rel="noopener noreferrer">
+            内閣府「国民の祝日」概要ページ
+        </a>
+    </div>
+
+    <!-- 著作権表記 -->
+    <footer>
+        &copy; 2025 Iwata M. All rights reserved.
+    </footer>
+
+    <script>
+        (async () => {
+            // 1) CSV取得＆Shift_JISデコード
+            const resp = await fetch('syukujitsu.csv');
+            if (!resp.ok) {
+                document.getElementById('result').textContent = '祝日データの読み込みに失敗しました';
+                return;
+            }
+            // Last-Modified の表示
+            const lm = resp.headers.get('Last-Modified');
+            let timestampText = '';
+            if (lm) {
+                const lmDate = new Date(lm);
+                // ISO8601拡張形式（タイムゾーン付き）
+                const offset = -lmDate.getTimezoneOffset();
+                const sign = offset >= 0 ? '+' : '-';
+                const pad = n => String(Math.abs(n)).padStart(2, '0');
+                const tz = sign + pad(offset / 60) + ':' + pad(offset % 60);
+                const iso = lmDate.getFullYear() + '-' +
+                    pad(lmDate.getMonth() + 1) + '-' +
+                    pad(lmDate.getDate()) + 'T' +
+                    pad(lmDate.getHours()) + ':' +
+                    pad(lmDate.getMinutes()) + ':' +
+                    pad(lmDate.getSeconds()) + tz;
+                timestampText = `CSV 最終更新: ${iso}`;
+            }
+            const buf = await resp.arrayBuffer();
+            const decoder = new TextDecoder('shift_jis');
+            const csvText = decoder.decode(buf);
+
+            // 2) CSV→マップ化
+            const lines = csvText.split(/\r?\n/).filter(l => l.trim());
+            const holidayMap = {};
+            let lastHolidayIso = '';
+            let lastHolidayName = '';
+            for (let i = 1; i < lines.length; i++) {
+                const [raw, name] = lines[i].split(',');
+                if (!raw || !name) continue;
+                const [y, m, d] = raw.split('/');
+                const iso = `${y.padStart(4, '0')}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
+                holidayMap[iso] = name;
+                lastHolidayIso = iso;
+                lastHolidayName = name;
+            }
+            // 最終祝日表示
+            if (lastHolidayIso) {
+                const d = new Date(lastHolidayIso);
+                const lastText = `CSV内最終祝日: ${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日 (${lastHolidayName})`;
+                timestampText += `<br>${lastText}`;
+            }
+            document.getElementById('timestamp').innerHTML = timestampText;
+
+            // 3) 和暦変換
+            function toWareki(date) {
+                const y = date.getFullYear(), m = date.getMonth() + 1, d = date.getDate();
+                let era, start;
+                if (y > 2019 || (y === 2019 && (m > 5 || (m === 5 && d >= 1)))) { era = '令和'; start = 2019; }
+                else if (y > 1989 || (y === 1989 && (m > 1 || (m === 1 && d >= 8)))) { era = '平成'; start = 1989; }
+                else if (y > 1926 || (y === 1926 && (m > 12 || (m === 12 && d >= 25)))) { era = '昭和'; start = 1926; }
+                else if (y > 1912 || (y === 1912 && (m > 7 || (m === 7 && d >= 30)))) { era = '大正'; start = 1912; }
+                else { era = '明治'; start = 1868; }
+                const n = y - start + 1;
+                return `${era}${n === 1 ? '元' : n}年`;
+            }
+
+            // 4) 曜日配列
+            const weekdays = ['日', '月', '火', '水', '木', '金', '土'];
+
+            // 5) UI要素取得
+            const picker = document.getElementById('datePicker');
+            const prevMonthBtn = document.getElementById('prevMonthBtn');
+            const prevDayBtn = document.getElementById('prevDayBtn');
+            const todayBtn = document.getElementById('todayBtn');
+            const nextDayBtn = document.getElementById('nextDayBtn');
+            const nextMonthBtn = document.getElementById('nextMonthBtn');
+            const result = document.getElementById('result');
+            const monthTitle = document.getElementById('monthTitle');
+            const monthList = document.getElementById('monthList');
+
+            // 日付＆月間リスト更新
+            function update() {
+                const iso = picker.value;
+                if (!iso) {
+                    result.textContent = '';
+                    monthTitle.textContent = '';
+                    monthList.innerHTML = '';
+                    return;
+                }
+                const dt = new Date(iso);
+                const wareki = toWareki(dt);
+                const monthDay = `${dt.getMonth() + 1}月${dt.getDate()}日`;
+                const w = weekdays[dt.getDay()];
+                const holiday = holidayMap[iso];
+                result.textContent =
+                    `${wareki} ${monthDay}（${w}曜日）: ` +
+                    (holiday ? `🎉 ${holiday}` : '祝日ではありません');
+
+                const [year, month] = iso.split('-');
+                monthTitle.textContent = `${year}年${parseInt(month, 10)}月の祝日`;
+                monthList.innerHTML = '';
+                Object.entries(holidayMap)
+                    .filter(([date]) => date.startsWith(`${year}-${month}`))
+                    .sort(([a], [b]) => a.localeCompare(b))
+                    .forEach(([date, name]) => {
+                        const d = new Date(date);
+                        const li = document.createElement('li');
+                        li.textContent = `${d.getMonth() + 1}月${d.getDate()}日: ${name}`;
+                        monthList.appendChild(li);
+                    });
+            }
+
+            // 日シフト／月シフト／今日
+            function shiftDay(offset) {
+                const d = new Date(picker.value);
+                d.setDate(d.getDate() + offset);
+                picker.value = d.toISOString().slice(0, 10);
+                update();
+            }
+            function shiftMonth(offset) {
+                const d = new Date(picker.value);
+                const original = d.getDate();
+                d.setDate(1);
+                d.setMonth(d.getMonth() + offset);
+                const lastDay = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
+                d.setDate(Math.min(original, lastDay));
+                picker.value = d.toISOString().slice(0, 10);
+                update();
+            }
+            function getLocalDate() {
+                const now = new Date();
+                const offset = now.getTimezoneOffset() * 60000; // ミリ秒単位のタイムゾーンオフセット
+                return new Date(now.getTime() - offset).toISOString().slice(0, 10);
+            }
+
+            function goToday() {
+                picker.value = getLocalDate();
+                update();
+            }
+
+            // イベント登録
+            prevMonthBtn.addEventListener('click', () => shiftMonth(-1));
+            prevDayBtn.addEventListener('click', () => shiftDay(-1));
+            todayBtn.addEventListener('click', goToday);
+            nextDayBtn.addEventListener('click', () => shiftDay(1));
+            nextMonthBtn.addEventListener('click', () => shiftMonth(1));
+            picker.addEventListener('change', update);
+
+            // 初期設定
+            picker.value = getLocalDate();
+            update();
+        })();
+    </script>
+</body>
+
+</html>
