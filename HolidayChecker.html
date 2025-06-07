@@ -55,6 +55,7 @@
             color: #555;
             text-align: center;
             font-style: italic;
+            font-size: 0.9rem;
         }
 
         #result {
@@ -205,10 +206,21 @@
             }
             // Last-Modified の表示
             const lm = resp.headers.get('Last-Modified');
+            let timestampText = '';
             if (lm) {
                 const lmDate = new Date(lm);
-                document.getElementById('timestamp').textContent =
-                    `CSV 最終更新: ${lmDate.toLocaleString('ja-JP')}`;
+                // ISO8601拡張形式（タイムゾーン付き）
+                const offset = -lmDate.getTimezoneOffset();
+                const sign = offset >= 0 ? '+' : '-';
+                const pad = n => String(Math.abs(n)).padStart(2, '0');
+                const tz = sign + pad(offset / 60) + ':' + pad(offset % 60);
+                const iso = lmDate.getFullYear() + '-' +
+                    pad(lmDate.getMonth() + 1) + '-' +
+                    pad(lmDate.getDate()) + 'T' +
+                    pad(lmDate.getHours()) + ':' +
+                    pad(lmDate.getMinutes()) + ':' +
+                    pad(lmDate.getSeconds()) + tz;
+                timestampText = `CSV 最終更新: ${iso}`;
             }
             const buf = await resp.arrayBuffer();
             const decoder = new TextDecoder('shift_jis');
@@ -217,13 +229,24 @@
             // 2) CSV→マップ化
             const lines = csvText.split(/\r?\n/).filter(l => l.trim());
             const holidayMap = {};
+            let lastHolidayIso = '';
+            let lastHolidayName = '';
             for (let i = 1; i < lines.length; i++) {
                 const [raw, name] = lines[i].split(',');
                 if (!raw || !name) continue;
                 const [y, m, d] = raw.split('/');
                 const iso = `${y.padStart(4, '0')}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
                 holidayMap[iso] = name;
+                lastHolidayIso = iso;
+                lastHolidayName = name;
             }
+            // 最終祝日表示
+            if (lastHolidayIso) {
+                const d = new Date(lastHolidayIso);
+                const lastText = `CSV内最終祝日: ${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日 (${lastHolidayName})`;
+                timestampText += `<br>${lastText}`;
+            }
+            document.getElementById('timestamp').innerHTML = timestampText;
 
             // 3) 和暦変換
             function toWareki(date) {
