@@ -231,12 +231,14 @@
             const holidayMap = {};
             let lastHolidayIso = '';
             let lastHolidayName = '';
+            let firstHolidayIso = '';
             for (let i = 1; i < lines.length; i++) {
                 const [raw, name] = lines[i].split(',');
                 if (!raw || !name) continue;
                 const [y, m, d] = raw.split('/');
                 const iso = `${y.padStart(4, '0')}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
                 holidayMap[iso] = name;
+                if (!firstHolidayIso) firstHolidayIso = iso;
                 lastHolidayIso = iso;
                 lastHolidayName = name;
             }
@@ -266,6 +268,15 @@
 
             // 5) UI要素取得
             const picker = document.getElementById('datePicker');
+            // min/max属性設定
+            if (firstHolidayIso && lastHolidayIso) {
+                picker.min = firstHolidayIso;
+                // 最後の祝日を含む年の12/31まで
+                const lastYear = lastHolidayIso.slice(0, 4);
+                picker.max = `${lastYear}-12-31`;
+            }
+            const minDate = picker.min;
+            const maxDate = picker.max;
             const prevMonthBtn = document.getElementById('prevMonthBtn');
             const prevDayBtn = document.getElementById('prevDayBtn');
             const todayBtn = document.getElementById('todayBtn');
@@ -311,7 +322,14 @@
             function shiftDay(offset) {
                 const d = new Date(picker.value);
                 d.setDate(d.getDate() + offset);
-                picker.value = d.toISOString().slice(0, 10);
+                const iso = d.toISOString().slice(0, 10);
+                if (offset < 0 && iso < minDate) {
+                    picker.value = minDate;
+                } else if (offset > 0 && iso > maxDate) {
+                    picker.value = maxDate;
+                } else {
+                    picker.value = iso;
+                }
                 update();
             }
             function shiftMonth(offset) {
@@ -321,7 +339,14 @@
                 d.setMonth(d.getMonth() + offset);
                 const lastDay = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
                 d.setDate(Math.min(original, lastDay));
-                picker.value = d.toISOString().slice(0, 10);
+                const iso = d.toISOString().slice(0, 10);
+                if (offset < 0 && iso < minDate) {
+                    picker.value = minDate;
+                } else if (offset > 0 && iso > maxDate) {
+                    picker.value = maxDate;
+                } else {
+                    picker.value = iso;
+                }
                 update();
             }
             function getLocalDate() {
