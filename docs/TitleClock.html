@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title id="title-clock"></title>
+    <script>
+        function updateClock() {
+            const now = new Date();
+            // 「M/D H:mm:ss」形式
+            const formatted = (now.getMonth() + 1) + '/' +
+                now.getDate() + ' ' +
+                String(now.getHours()).padStart(2, '0') + ':' +
+                String(now.getMinutes()).padStart(2, '0') + ':' +
+                String(now.getSeconds()).padStart(2, '0');
+            document.title = formatted;
+            document.getElementById('title-clock').textContent = formatted;
+        }
+        setInterval(updateClock, 100);
+        window.onload = updateClock;
+    </script>
+</head>
+</html>
