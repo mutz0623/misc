@@ -307,15 +307,23 @@
                 const [year, month] = iso.split('-');
                 monthTitle.textContent = `${year}年${parseInt(month, 10)}月の祝日`;
                 monthList.innerHTML = '';
-                Object.entries(holidayMap)
+                const holidays = Object.entries(holidayMap)
                     .filter(([date]) => date.startsWith(`${year}-${month}`))
-                    .sort(([a], [b]) => a.localeCompare(b))
-                    .forEach(([date, name]) => {
+                    .sort(([a], [b]) => a.localeCompare(b));
+                if (holidays.length === 0) {
+                    // 祝日がない場合の表示
+                    const li = document.createElement('li');
+                    li.textContent = `${year}年${parseInt(month, 10)}月は祝日はありません`;
+                    monthList.appendChild(li);
+                } else {
+                    holidays.forEach(([date, name]) => {
                         const d = new Date(date);
+                        const w = weekdays[d.getDay()];
                         const li = document.createElement('li');
-                        li.textContent = `${d.getMonth() + 1}月${d.getDate()}日: ${name}`;
+                        li.textContent = `${d.getMonth() + 1}月${d.getDate()}日(${w}): ${name}`;
                         monthList.appendChild(li);
                     });
+                }
             }
 
             // 日シフト／月シフト／今日
