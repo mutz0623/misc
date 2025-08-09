@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="ja">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -15,26 +16,30 @@
             align-items: center;
             min-height: 100vh;
         }
+
         .container {
             background: #fff;
             margin-top: 60px;
             padding: 32px 24px 24px 24px;
             border-radius: 12px;
-            box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
             max-width: 400px;
             width: 100%;
         }
+
         h1 {
             font-size: 1.5rem;
             margin-bottom: 24px;
             color: #333;
             text-align: center;
         }
+
         label {
             display: block;
             margin-bottom: 8px;
             color: #555;
         }
+
         input[type="date"] {
             width: 100%;
             padding: 8px;
@@ -43,6 +48,7 @@
             border-radius: 4px;
             font-size: 1rem;
         }
+
         button {
             width: 100%;
             padding: 10px;
@@ -54,72 +60,130 @@
             cursor: pointer;
             transition: background 0.2s;
         }
+
         button:hover {
             background: #1565c0;
         }
+
         .result {
             margin-top: 24px;
             font-size: 1.2rem;
             color: #1976d2;
             text-align: center;
         }
+
         .error {
             color: #d32f2f;
             margin-top: 16px;
             text-align: center;
         }
+
+        /* カレンダー土日祝色（ライトモード） */
+        td.holiday {
+            color: #d32f2f !important;
+        }
+
+        td.sunday {
+            color: #d32f2f !important;
+        }
+
+        td.saturday {
+            color: #1976d2 !important;
+        }
+
         /* ダークモード対応 */
         @media (prefers-color-scheme: dark) {
             body {
                 background: #181a1b;
                 color: #e0e0e0;
             }
+
             .container {
                 background: #23272a;
-                box-shadow: 0 2px 12px rgba(0,0,0,0.32);
+                box-shadow: 0 2px 12px rgba(0, 0, 0, 0.32);
             }
+
             h1 {
                 color: #e0e0e0;
             }
+
             label {
                 color: #b0b0b0;
             }
+
             input[type="date"] {
                 background: #23272a;
                 color: #e0e0e0;
                 border: 1px solid #444;
             }
+
             button {
                 background: #1565c0;
                 color: #fff;
             }
+
             button:hover {
                 background: #1976d2;
             }
+
             .result {
                 color: #90caf9;
             }
+
             .error {
                 color: #ff8a80;
             }
+
             table {
                 background: #23272a !important;
                 color: #e0e0e0;
             }
+
             th {
                 background: #2c3136 !important;
                 color: #b0b0b0 !important;
             }
+
             td {
                 border: 1px solid #333 !important;
+            }
+
+            /* カレンダー選択範囲ハイライト（ダークモード用） */
+            td[data-highlight="range"] {
+                background: #29425c !important;
+                color: #e0e0e0 !important;
+            }
+
+            td[data-highlight="edge"] {
+                background: #3b5c7a !important;
+                color: #fff !important;
+                font-weight: bold;
+            }
+
+            td.holiday {
+                color: #ff8a80 !important;
+            }
+
+            td.sunday {
+                color: #ff8a80 !important;
+            }
+
+            td.saturday {
+                color: #90caf9 !important;
+            }
+
+            td:not(.holiday):not(.sunday):not(.saturday) {
+                color: #e0e0e0 !important;
             }
         }
     </style>
 </head>
+
 <body>
     <div class="container">
         <h1>日数計算ツール</h1>
-        <div id="dateForm" autocomplete="off" style="display: flex; gap: 16px; align-items: flex-end; justify-content: center; margin-bottom: 18px;">
+        <div id="dateForm" autocomplete="off"
+            style="display: flex; gap: 16px; align-items: flex-end; justify-content: center; margin-bottom: 18px;">
             <div style="display: flex; flex-direction: column; align-items: flex-start;">
                 <label for="date1">開始日</label>
                 <input type="date" id="date1" required style="width: 140px;">
@@ -130,7 +194,7 @@
             </div>
         </div>
         <div class="result" id="result"></div>
-    <div id="calendarContainer" style="margin-top: 24px;"></div>
+        <div id="calendarContainer" style="margin-top: 24px;"></div>
         <div class="error" id="error"></div>
     </div>
     <script>
@@ -147,7 +211,7 @@
                 const m = d.match(/^(\d{4})\/(\d{1,2})\/(\d{1,2})$/);
                 if (m) {
                     // 例: 2025/08/11 → 2025/8/11
-                    return parseInt(m[1],10) + '/' + parseInt(m[2],10) + '/' + parseInt(m[3],10);
+                    return parseInt(m[1], 10) + '/' + parseInt(m[2], 10) + '/' + parseInt(m[3], 10);
                 }
                 return null;
             }).filter(Boolean);
@@ -158,7 +222,7 @@
             const day = date.getDay();
             if (day === 0 || day === 6) return false; // 日曜(0)・土曜(6)
             // syukujitsu.csvの形式（ゼロ埋めなし）に合わせる
-            const ymd = date.getFullYear() + '/' + (date.getMonth()+1) + '/' + date.getDate();
+            const ymd = date.getFullYear() + '/' + (date.getMonth() + 1) + '/' + date.getDate();
             if (holidaysSet.has(ymd)) return false;
             return true;
         }
@@ -197,7 +261,7 @@
 
             // 日付表示用フォーマット関数
             function formatYMD(date) {
-                return date.getFullYear() + '/' + String(date.getMonth()+1).padStart(2,'0') + '/' + String(date.getDate()).padStart(2,'0');
+                return date.getFullYear() + '/' + String(date.getMonth() + 1).padStart(2, '0') + '/' + String(date.getDate()).padStart(2, '0');
             }
             const startDate = d1;
             const endDate = d2;
@@ -251,18 +315,18 @@
             table.style.minWidth = '260px';
             // ヘッダー
             const caption = document.createElement('caption');
-            caption.textContent = `${year}年${month+1}月`;
+            caption.textContent = `${year}年${month + 1}月`;
             caption.style.fontWeight = 'bold';
             caption.style.marginBottom = '4px';
             table.appendChild(caption);
             const thead = document.createElement('thead');
             const trh = document.createElement('tr');
-            ['日','月','火','水','木','金','土'].forEach((d,i) => {
+            ['日', '月', '火', '水', '木', '金', '土'].forEach((d, i) => {
                 const th = document.createElement('th');
                 th.textContent = d;
                 th.style.padding = '2px 6px';
-                th.style.background = i===0 ? '#ffeaea' : i===6 ? '#eaf3ff' : '#eaeaea';
-                th.style.color = i===0 ? '#d32f2f' : i===6 ? '#1976d2' : '#555';
+                th.style.background = i === 0 ? '#ffeaea' : i === 6 ? '#eaf3ff' : '#eaeaea';
+                th.style.color = i === 0 ? '#d32f2f' : i === 6 ? '#1976d2' : '#555';
                 th.style.fontWeight = 'bold';
                 trh.appendChild(th);
             });
@@ -272,7 +336,7 @@
             const tbody = document.createElement('tbody');
             let tr = document.createElement('tr');
             // 空白セル
-            for(let i=0;i<firstDay.getDay();i++){
+            for (let i = 0; i < firstDay.getDay(); i++) {
                 tr.appendChild(document.createElement('td'));
             }
             // 開始日・終了日をgetTime()で比較するために事前に取得
@@ -285,7 +349,7 @@
             // 範囲ハイライト用にmin/maxを計算
             const minTime = Math.min(startTime, endTime);
             const maxTime = Math.max(startTime, endTime);
-            for(let d=1;d<=lastDay.getDate();d++){
+            for (let d = 1; d <= lastDay.getDate(); d++) {
                 const td = document.createElement('td');
                 // curは毎回新規生成
                 const cur = new Date(year, month, d);
@@ -294,49 +358,50 @@
                 td.style.textAlign = 'center';
                 td.style.padding = '2px 6px';
                 td.style.border = '1px solid #e0e0e0';
-                // 祝日判定
-                const ymd = cur.getFullYear() + '/' + (cur.getMonth()+1) + '/' + cur.getDate();
-                let isHoliday = false;
-                if(holidaysSet.has(ymd)){
-                    td.style.color = '#d32f2f'; // 祝日は必ず赤字
+                // 祝日・土日判定
+                const ymd = cur.getFullYear() + '/' + (cur.getMonth() + 1) + '/' + cur.getDate();
+                if (holidaysSet.has(ymd)) {
+                    td.classList.add('holiday');
                     td.title = '祝日';
-                    isHoliday = true;
-                } else if(cur.getDay() === 0){
-                    // 日曜
-                    td.style.color = '#d32f2f';
-                } else if(cur.getDay() === 6){
-                    // 土曜
-                    td.style.color = '#1976d2';
+                } else if (cur.getDay() === 0) {
+                    td.classList.add('sunday');
+                } else if (cur.getDay() === 6) {
+                    td.classList.add('saturday');
                 }
+
                 // 範囲内ハイライト（開始日・終了日は除外し、祝日色が優先されるようにbackground未設定時のみ）
-                if(curTime !== startTime && curTime !== endTime && curTime >= minTime && curTime <= maxTime && !td.style.background){
+                if (curTime !== startTime && curTime !== endTime && curTime >= minTime && curTime <= maxTime && !td.style.background) {
                     td.style.background = '#cbe7ff';
+                    td.setAttribute('data-highlight', 'range');
                 }
 
                 // 開始日・終了日の強調は必ず最後に完全に上書きする
-                if(curTime === startTime){
+                if (curTime === startTime) {
                     td.style.background = '#cbe7ff';
                     td.style.fontWeight = 'bold';
                     td.title = '開始日';
-                } else if(curTime === endTime){
+                    td.setAttribute('data-highlight', 'edge');
+                } else if (curTime === endTime) {
                     td.style.background = '#cbe7ff';
                     td.style.fontWeight = 'bold';
                     td.title = '終了日';
+                    td.setAttribute('data-highlight', 'edge');
                 }
+
                 // 今日
                 const today = new Date();
-                if(cur.getFullYear()===today.getFullYear() && cur.getMonth()===today.getMonth() && cur.getDate()===today.getDate()){
+                if (cur.getFullYear() === today.getFullYear() && cur.getMonth() === today.getMonth() && cur.getDate() === today.getDate()) {
                     td.style.border = '2px solid #1976d2';
                 }
                 tr.appendChild(td);
-                if(cur.getDay() === 6){
+                if (cur.getDay() === 6) {
                     tbody.appendChild(tr);
                     tr = document.createElement('tr');
                 }
             }
             // 残り空白
-            if(tr.children.length>0){
-                for(let i=tr.children.length;i<7;i++){
+            if (tr.children.length > 0) {
+                for (let i = tr.children.length; i < 7; i++) {
                     tr.appendChild(document.createElement('td'));
                 }
                 tbody.appendChild(tr);
@@ -346,4 +411,5 @@
         }
     </script>
 </body>
+
 </html>
