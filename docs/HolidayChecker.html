@@ -2,199 +2,226 @@
 <html lang="ja">
 
 <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
     <meta charset="UTF-8">
-    <title>祝日チェッカー</title>
-    <style>
-        body {
-            font-family: 'Arial', sans-serif;
-            margin: 2em;
-            background: linear-gradient(135deg, #f0f8ff, #e6e6fa);
-            color: #333;
-        }
-
-        h1 {
-            font-size: 2rem;
-            text-align: center;
-            color: #4b0082;
-            text-shadow: 1px 1px 2px #aaa;
-        }
-
-        label,
-        input,
-        button {
-            font-size: 1rem;
-            vertical-align: middle;
-        }
-
-        #controls {
-            margin-bottom: 1em;
-            text-align: center;
-        }
-
-        #controls div {
-            margin-bottom: 1em;
-        }
-
-        #controls button {
-            margin-left: 0.5em;
-            padding: 0.5em 1em;
-            border: none;
-            border-radius: 5px;
-            background-color: #4b0082;
-            color: white;
-            cursor: pointer;
-            transition: background-color 0.3s ease, transform 0.2s ease;
-        }
-
-        #controls button:hover {
-            background-color: #6a0dad;
-            transform: scale(1.05);
-        }
-
-        #timestamp {
-            color: #555;
-            text-align: center;
-            font-style: italic;
-            font-size: 0.9rem;
-        }
-
-        #result {
-            margin-top: 1em;
-            font-weight: bold;
-            text-align: center;
-            font-size: 1.2rem;
-        }
-
-        #monthHolidays {
-            margin-top: 1.5em;
-            text-align: center;
-        }
-
-        #monthHolidays h2 {
-            font-size: 1.3rem;
-            margin-bottom: 0.5em;
-            color: #4b0082;
-            text-shadow: 1px 1px 2px #aaa;
-        }
-
-        #monthHolidays ul {
-            padding-left: 1.2em;
-            list-style: none;
-            text-align: left;
-            display: inline-block;
-        }
-
-        #monthHolidays ul li {
-            margin-bottom: 0.3em;
-            padding: 0.3em;
-            background: #f8f8ff;
-            border-radius: 5px;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-        }
-
-        #source {
-            margin-top: 0em;
-            font-size: 0.9rem;
-            text-align: center;
-        }
-
-        #source a {
-            color: #4b0082;
-            text-decoration: none;
-        }
-
-        #source a:hover {
-            text-decoration: underline;
-        }
-
-        /* ダークモード対応 */
-        @media (prefers-color-scheme: dark) {
+        <title>祝日チェッカー</title>
+        <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+        <style>
             body {
-                background: linear-gradient(135deg, #2c2c54, #1e1e2f);
-                color: #ddd;
+                font-family: 'Roboto', 'Arial', sans-serif;
+                background-color: #f4f4f9;
+                color: #333;
+                margin: 0;
+                padding: 0;
+                min-height: 100vh;
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                align-items: center;
+            }
+
+            .card {
+                background: #fff;
+                border-radius: 14px;
+                box-shadow: 0 4px 16px rgba(0,0,0,0.10);
+                padding: 32px 28px 24px 28px;
+                margin: 32px 0 0 0;
+                min-width: 350px;
+                max-width: 400px;
+                width: 100%;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
             }
 
             h1 {
-                color: #a29bfe;
-                text-shadow: 1px 1px 2px #000;
+                font-size: 2rem;
+                text-align: center;
+                color: #007BFF;
+                margin-bottom: 1.2em;
+                font-weight: 700;
+                letter-spacing: 0.04em;
+            }
+
+            label,
+            input,
+            button {
+                font-size: 1rem;
+                vertical-align: middle;
+            }
+
+            #controls {
+                margin-bottom: 1em;
+                text-align: center;
+                width: 100%;
+            }
+
+            #controls div {
+                margin-bottom: 1em;
             }
 
             #controls button {
-                background-color: #6c5ce7;
-                color: #fff;
+                margin-left: 0.5em;
+                padding: 0.5em 0.5em;
+                border: none;
+                border-radius: 6px;
+                background-color: #007BFF;
+                color: white;
+                font-weight: 700;
+                cursor: pointer;
+                transition: background-color 0.3s, transform 0.2s;
             }
 
             #controls button:hover {
-                background-color: #a29bfe;
+                background-color: #0056b3;
+                transform: scale(1.05);
             }
 
-            #timestamp {
-                color: #aaa;
+            #result {
+                margin-top: 1em;
+                font-weight: bold;
+                text-align: center;
+                font-size: 1rem;
+                min-height: 2em;
             }
 
-            #monthHolidays ul li {
-                background: #3a3a5c;
-                box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
-            }
-
-            #source a {
-                color: #a29bfe;
+            #monthHolidays {
+                margin-top: 1.5em;
+                text-align: center;
+                width: 100%;
             }
 
             #monthHolidays h2 {
-                color: #a29bfe;
-                text-shadow: 1px 1px 2px #000;
+                font-size: 1.1rem;
+                margin-bottom: 0.5em;
+                color: #007BFF;
+                font-weight: 700;
             }
-        }
 
-        footer {
-            text-align: center;
-            margin-top: 2em;
-            font-size: 0.9rem;
-            color: #555;
-        }
-    </style>
+            #monthHolidays ul {
+                padding-left: 1.2em;
+                list-style: none;
+                text-align: left;
+                display: inline-block;
+                margin: 0 auto;
+            }
+
+            #monthHolidays ul li {
+                margin-bottom: 0.3em;
+                padding: 0.3em 0.8em;
+                background: #f8f8ff;
+                border-radius: 5px;
+                box-shadow: 0 1px 3px rgba(0, 0, 0, 0.07);
+            }
+
+            #timestamp {
+                color: #666;
+                text-align: center;
+                font-style: italic;
+                font-size: 0.9rem;
+                margin-top: 1.2em;
+            }
+
+            #source {
+                margin-top: 0.5em;
+                font-size: 0.9rem;
+                text-align: center;
+            }
+
+            #source a {
+                color: #007BFF;
+                text-decoration: none;
+                font-weight: 700;
+            }
+
+            #source a:hover {
+                text-decoration: underline;
+            }
+
+            footer {
+                text-align: center;
+                margin-top: 2em;
+                font-size: 0.9rem;
+                color: #666;
+                padding: 10px 0;
+            }
+
+            /* ダークテーマ対応 */
+            @media (prefers-color-scheme: dark) {
+                body {
+                    background-color: #121212;
+                    color: #e0e0e0;
+                }
+                .card {
+                    background: #1e1e1e;
+                    box-shadow: 0 4px 16px rgba(0,0,0,0.5);
+                }
+                h1 {
+                    color: #80bfff;
+                }
+                #controls button {
+                    background-color: #80bfff;
+                    color: #222;
+                }
+                #controls button:hover {
+                    background-color: #4da6ff;
+                }
+                #result {
+                    color: #e0e0e0;
+                }
+                #monthHolidays h2 {
+                    color: #80bfff;
+                }
+                #monthHolidays ul li {
+                    background: #232345;
+                    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+                }
+                #timestamp {
+                    color: #999;
+                }
+                #source a {
+                    color: #80bfff;
+                }
+                footer {
+                    color: #999;
+                }
+            }
+        </style>
 </head>
 
 <body>
-    <h1>祝日チェッカー</h1>
 
-    <div id="controls">
-        <div>
-            <label for="datePicker">日付を選択：</label>
-            <input type="date" id="datePicker" />
+        <div class="card">
+            <h1>祝日チェッカー</h1>
+            <div id="controls">
+                <div>
+                    <label for="datePicker">日付を選択：</label>
+                    <input type="date" id="datePicker" />
+                </div>
+                <div>
+                    <button id="prevMonthBtn">前月同日</button>
+                    <button id="prevDayBtn">前日</button>
+                    <button id="todayBtn">今日</button>
+                    <button id="nextDayBtn">翌日</button>
+                    <button id="nextMonthBtn">翌月同日</button>
+                </div>
+            </div>
+            <div id="result"></div>
+            <div id="monthHolidays">
+                <h2 id="monthTitle"></h2>
+                <ul id="monthList"></ul>
+            </div>
+            <div id="timestamp"></div>
+            <div id="source">
+                祝日CSV取得元：
+                <a href="https://www8.cao.go.jp/chosei/shukujitsu/gaiyou.html" target="_blank" rel="noopener noreferrer">
+                    内閣府「国民の祝日」概要ページ
+                </a>
+            </div>
         </div>
-        <div>
-            <button id="prevMonthBtn">前月同日</button>
-            <button id="prevDayBtn">前日</button>
-            <button id="todayBtn">今日</button>
-            <button id="nextDayBtn">翌日</button>
-            <button id="nextMonthBtn">翌月同日</button>
-        </div>
-    </div>
-
-    <div id="result"></div>
-
-    <div id="monthHolidays">
-        <h2 id="monthTitle"></h2>
-        <ul id="monthList"></ul>
-    </div>
-
-    <!-- CSV の最終更新日時 -->
-    <div id="timestamp"></div>
-
-    <!-- 取得元リンク -->
-    <div id="source">
-        祝日CSV取得元：
-        <a href="https://www8.cao.go.jp/chosei/shukujitsu/gaiyou.html" target="_blank" rel="noopener noreferrer">
-            内閣府「国民の祝日」概要ページ
-        </a>
-    </div>
-
-    <!-- 著作権表記 -->
-    <footer>
-        &copy; 2025 Iwata M. All rights reserved.
-    </footer>
+        <footer>
+            &copy; 2025 Iwata M. All rights reserved.
+        </footer>
 
     <script>
         (async () => {
