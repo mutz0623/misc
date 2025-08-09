@@ -207,6 +207,50 @@
     </div>
     <script>
         let holidays = null;
+        // クエリパラメータから日付を取得し、inputにセットする関数
+        function setDatesFromQuery() {
+            const params = new URLSearchParams(window.location.search);
+            const start = params.get('start');
+            const end = params.get('end');
+            let changed = false;
+            let errorMsg = '';
+            const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+            if (start) {
+                if (!dateRegex.test(start)) {
+                    errorMsg = '開始日の形式が正しくありません（YYYY-MM-DD）。';
+                } else {
+                    const el = document.getElementById('date1');
+                    if (el && el.value !== start) {
+                        el.value = start;
+                        changed = true;
+                    }
+                }
+            }
+            if (end) {
+                if (!dateRegex.test(end)) {
+                    errorMsg = (errorMsg ? errorMsg + '\n' : '') + '終了日の形式が正しくありません（YYYY-MM-DD）。';
+                } else {
+                    const el = document.getElementById('date2');
+                    if (el && el.value !== end) {
+                        el.value = end;
+                        changed = true;
+                    }
+                }
+            }
+            // エラーがあれば表示
+            if (errorMsg) {
+                const errorDiv = document.getElementById('error');
+                if (errorDiv) errorDiv.textContent = errorMsg;
+                return;
+            }
+            // 両方セットされた場合は自動計算
+            if (changed && document.getElementById('date1').value && document.getElementById('date2').value) {
+                calcDateSpan();
+            }
+        }
+
+        // ページロード時にクエリパラメータ反映
+        window.addEventListener('DOMContentLoaded', setDatesFromQuery);
         async function loadHolidays() {
             if (holidays !== null) return holidays;
             // syukujitsu.csvはdocs/配下にある前提
@@ -284,8 +328,36 @@
             // カレンダー表示（開始日・終了日を明示的に渡す）
             renderCalendar(d1, d2, holidaysSet);
         }
-        document.getElementById('date1').addEventListener('change', calcDateSpan);
-        document.getElementById('date2').addEventListener('change', calcDateSpan);
+        // 日付変更時にクエリパラメータを更新して遷移
+        function updateQueryAndNavigate() {
+            const date1 = document.getElementById('date1').value;
+            const date2 = document.getElementById('date2').value;
+            const url = new URL(window.location.href);
+            let changed = false;
+            if (date1) {
+                url.searchParams.set('start', date1);
+                changed = true;
+            } else {
+                url.searchParams.delete('start');
+            }
+            if (date2) {
+                url.searchParams.set('end', date2);
+                changed = true;
+            } else {
+                url.searchParams.delete('end');
+            }
+            // どちらかが空欄なら両方消す
+            if (!date1 && !date2) {
+                url.searchParams.delete('start');
+                url.searchParams.delete('end');
+            }
+            // 現在のURLと異なる場合のみ遷移
+            if (window.location.search !== url.search) {
+                window.location.search = url.search;
+            }
+        }
+        document.getElementById('date1').addEventListener('change', updateQueryAndNavigate);
+        document.getElementById('date2').addEventListener('change', updateQueryAndNavigate);
 
         // カレンダー描画関数
         function renderCalendar(date1, date2, holidaysSet) {
