@@ -13,6 +13,7 @@
             padding: 0;
             display: flex;
             flex-direction: column;
+            justify-content: center;
             align-items: center;
             min-height: 100vh;
         }
@@ -180,7 +181,7 @@
 </head>
 
 <body>
-    <div class="container">
+    <div class="container" style="margin-bottom: auto;">
         <h1>日数計算ツール</h1>
         <div id="dateForm" autocomplete="off"
             style="display: flex; gap: 16px; align-items: flex-end; justify-content: center; margin-bottom: 18px;">
@@ -410,6 +411,9 @@
             return table;
         }
     </script>
+    <footer style="font-size: 0.9em; color: #666; text-align: center; margin-top: auto; padding: 10px 0;">
+        &copy; 2025 Iwata M. All rights reserved.
+    </footer>
 </body>
 
 </html>
