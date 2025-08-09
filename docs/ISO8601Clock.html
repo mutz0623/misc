@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="ja">
+
 <head>
   <meta charset="UTF-8">
   <title>ISO8601 Clock</title>
@@ -10,19 +11,18 @@
       align-items: center;
       height: 100vh;
       margin: 0;
-      font-family: sans-serif;
+      font-family: 'Roboto', sans-serif;
       font-size: 2rem;
-      /* ライトテーマの背景・文字色 */
-      background-color: #f9f9f9;
-      color: #222;
+      background-color: #f4f4f9;
+      color: #333;
       transition: background-color 0.3s, color 0.3s;
     }
+
     #clock {
       padding: 1rem 2rem;
-      border: 2px solid #333;
-      border-radius: 8px;
+      border-radius: 10px;
       background-color: #fff;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
       transition: background-color 0.3s, border-color 0.3s, box-shadow 0.3s;
     }
 
@@ -30,34 +30,35 @@
     @media (prefers-color-scheme: dark) {
       body {
         background-color: #121212;
-        color: #eee;
+        color: #e0e0e0;
       }
+
       #clock {
-        border-color: #888;
-        background-color: #1e1e1e;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.5);
+        background: #1e1e1e;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.5);
       }
     }
   </style>
 </head>
+
 <body>
   <div id="clock">--:--:--</div>
 
   <script>
     function toLocalISOString(date) {
       const pad = num => String(num).padStart(2, '0');
-      const year   = date.getFullYear();
-      const month  = pad(date.getMonth() + 1);
-      const day    = pad(date.getDate());
-      const hour   = pad(date.getHours());
+      const year = date.getFullYear();
+      const month = pad(date.getMonth() + 1);
+      const day = pad(date.getDate());
+      const hour = pad(date.getHours());
       const minute = pad(date.getMinutes());
       const second = pad(date.getSeconds());
 
       const offsetMin = -date.getTimezoneOffset();
-      const sign      = offsetMin >= 0 ? '+' : '-';
-      const absMin    = Math.abs(offsetMin);
-      const offHour   = pad(Math.floor(absMin / 60));
-      const offMin    = pad(absMin % 60);
+      const sign = offsetMin >= 0 ? '+' : '-';
+      const absMin = Math.abs(offsetMin);
+      const offHour = pad(Math.floor(absMin / 60));
+      const offMin = pad(absMin % 60);
 
       return `${year}-${month}-${day}T${hour}:${minute}:${second}${sign}${offHour}:${offMin}`;
     }
@@ -70,4 +71,5 @@
     setInterval(updateClock, 100);
   </script>
 </body>
+
 </html>

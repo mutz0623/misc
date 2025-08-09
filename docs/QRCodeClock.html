@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="ja">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -8,38 +9,56 @@
   <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
   <style>
     body {
-      font-family: sans-serif;
+      font-family: 'Roboto', sans-serif;
       display: flex;
       justify-content: center;
       align-items: center;
       height: 100vh;
-      background: #f5f5f5;
+      background-color: #f4f4f9;
+      color: #333;
       margin: 0;
     }
+
     #qrcode {
-  /* クワイエットゾーン用のラッパー */
+      /* クワイエットゾーン用のラッパー */
       display: flex;
       justify-content: center;
       align-items: center;
       background: transparent;
-      width: 240px; /* QR本体+余白 */
+      width: 240px;
+      /* QR本体+余白 */
       height: 240px;
     }
+
     .qrcode-quietzone {
       background: #fff !important;
       background-color: #fff !important;
       color-scheme: only light;
-      padding: 20px; /* クワイエットゾーンの幅 */
-      border-radius: 8px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
       display: flex;
       justify-content: center;
       align-items: center;
       width: 200px;
       height: 200px;
     }
+
+    @media (prefers-color-scheme: dark) {
+      body {
+        background-color: #121212;
+        color: #e0e0e0;
+      }
+
+      .qrcode-quietzone {
+        background: #1e1e1e !important;
+        background-color: #1e1e1e !important;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.5);
+      }
+    }
   </style>
 </head>
+
 <body>
   <div id="qrcode"></div>
 
@@ -51,7 +70,7 @@
       const now = new Date();
       const timeString = now.toLocaleTimeString('ja-JP', {
         hour12: false,
-        hour:   '2-digit',
+        hour: '2-digit',
         minute: '2-digit',
         second: '2-digit'
       });
@@ -67,11 +86,11 @@
 
       // QR コード生成（内容は時刻文字列）
       new QRCode(quietZone, {
-        text:         timeString,
-        width:        160, // クワイエットゾーン内に収まるよう調整
-        height:       160,
-        colorDark:    '#000',
-        colorLight:   '#fff', // 白を明示
+        text: timeString,
+        width: 160, // クワイエットゾーン内に収まるよう調整
+        height: 160,
+        colorDark: '#000',
+        colorLight: '#fff', // 白を明示
         correctLevel: QRCode.CorrectLevel.H
       });
     }
@@ -81,4 +100,5 @@
     setInterval(updateQRCode, 1000);
   </script>
 </body>
+
 </html>
