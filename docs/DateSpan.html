@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>日数計算ツール</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', 'Meiryo', sans-serif;
+            background: #f7f7fa;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+        .container {
+            background: #fff;
+            margin-top: 60px;
+            padding: 32px 24px 24px 24px;
+            border-radius: 12px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+            max-width: 400px;
+            width: 100%;
+        }
+        h1 {
+            font-size: 1.5rem;
+            margin-bottom: 24px;
+            color: #333;
+            text-align: center;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #555;
+        }
+        input[type="date"] {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 18px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 1rem;
+        }
+        button {
+            width: 100%;
+            padding: 10px;
+            background: #1976d2;
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        button:hover {
+            background: #1565c0;
+        }
+        .result {
+            margin-top: 24px;
+            font-size: 1.2rem;
+            color: #1976d2;
+            text-align: center;
+        }
+        .error {
+            color: #d32f2f;
+            margin-top: 16px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>日数計算ツール</h1>
+        <div id="dateForm" autocomplete="off" style="display: flex; gap: 16px; align-items: flex-end; justify-content: center; margin-bottom: 18px;">
+            <div style="display: flex; flex-direction: column; align-items: flex-start;">
+                <label for="date1">開始日</label>
+                <input type="date" id="date1" required style="width: 140px;">
+            </div>
+            <div style="display: flex; flex-direction: column; align-items: flex-start;">
+                <label for="date2">終了日</label>
+                <input type="date" id="date2" required style="width: 140px;">
+            </div>
+        </div>
+        <div class="result" id="result"></div>
+    <div id="calendarContainer" style="margin-top: 24px;"></div>
+        <div class="error" id="error"></div>
+    </div>
+    <script>
+        let holidays = null;
+        async function loadHolidays() {
+            if (holidays !== null) return holidays;
+            // syukujitsu.csvはdocs/配下にある前提
+            const res = await fetch('syukujitsu.csv');
+            if (!res.ok) return [];
+            const text = await res.text();
+            // 1列目が日付(YYYY/MM/DD)のCSVをパースし、ゼロ埋めを外してYYYY/M/D形式に正規化
+            holidays = text.split('\n').map(line => {
+                const d = line.split(',')[0].trim();
+                const m = d.match(/^(\d{4})\/(\d{1,2})\/(\d{1,2})$/);
+                if (m) {
+                    // 例: 2025/08/11 → 2025/8/11
+                    return parseInt(m[1],10) + '/' + parseInt(m[2],10) + '/' + parseInt(m[3],10);
+                }
+                return null;
+            }).filter(Boolean);
+            return holidays;
+        }
+
+        function isBusinessDay(date, holidaysSet) {
+            const day = date.getDay();
+            if (day === 0 || day === 6) return false; // 日曜(0)・土曜(6)
+            // syukujitsu.csvの形式（ゼロ埋めなし）に合わせる
+            const ymd = date.getFullYear() + '/' + (date.getMonth()+1) + '/' + date.getDate();
+            if (holidaysSet.has(ymd)) return false;
+            return true;
+        }
+
+        async function calcDateSpan() {
+            const date1 = document.getElementById('date1').value;
+            const date2 = document.getElementById('date2').value;
+            const resultDiv = document.getElementById('result');
+            const errorDiv = document.getElementById('error');
+            resultDiv.textContent = '';
+            errorDiv.textContent = '';
+            document.getElementById('calendarContainer').innerHTML = '';
+            if (!date1 || !date2) {
+                // 両方入力されていない場合は何も表示しない
+                return;
+            }
+            const d1 = new Date(date1);
+            const d2 = new Date(date2);
+            if (isNaN(d1) || isNaN(d2)) {
+                errorDiv.textContent = '日付の形式が正しくありません。';
+                return;
+            }
+            const diffMs = d2 - d1;
+            const diffDays = Math.abs(Math.round(diffMs / (1000 * 60 * 60 * 24))) + 1;
+
+            // 営業日数計算
+            const holidaysArr = await loadHolidays();
+            const holidaysSet = new Set(holidaysArr);
+            // start, endは新しいDateインスタンスで保持（参照渡しによる破壊を防ぐ）
+            let start = d1 < d2 ? new Date(d1) : new Date(d2);
+            let end = d1 < d2 ? new Date(d2) : new Date(d1);
+            let businessDays = 0;
+            for (let dt = new Date(start); dt <= end; dt.setDate(dt.getDate() + 1)) {
+                if (isBusinessDay(dt, holidaysSet)) businessDays++;
+            }
+
+            // 日付表示用フォーマット関数
+            function formatYMD(date) {
+                return date.getFullYear() + '/' + String(date.getMonth()+1).padStart(2,'0') + '/' + String(date.getDate()).padStart(2,'0');
+            }
+            const startDate = d1;
+            const endDate = d2;
+            if (diffMs === 0) {
+                resultDiv.innerHTML = `同じ日付です。差は0日です。<br>営業日数: ${(isBusinessDay(d1, holidaysSet) ? '1' : '0')} 日`;
+                // resultDiv.innerHTML = `開始日: ${formatYMD(startDate)}<br>終了日: ${formatYMD(endDate)}<br>同じ日付です。差は0日です。<br>営業日数: ${(isBusinessDay(d1, holidaysSet) ? '1' : '0')} 日`;
+            } else {
+                resultDiv.innerHTML = `実日数: ${diffDays} 日<br>営業日数: ${businessDays} 日`;
+                // resultDiv.innerHTML = `開始日: ${formatYMD(startDate)}<br>終了日: ${formatYMD(endDate)}<br>実日数: ${diffDays} 日<br>営業日数: ${businessDays} 日`;
+            }
+
+            // カレンダー表示（開始日・終了日を明示的に渡す）
+            renderCalendar(d1, d2, holidaysSet);
+        }
+        document.getElementById('date1').addEventListener('change', calcDateSpan);
+        document.getElementById('date2').addEventListener('change', calcDateSpan);
+
+        // カレンダー描画関数
+        function renderCalendar(date1, date2, holidaysSet) {
+            const container = document.getElementById('calendarContainer');
+            container.innerHTML = '';
+            // 開始日・終了日を明示的に渡す
+            const startDate = date1;
+            const endDate = date2;
+            // 複数月にまたがる場合も考慮
+            let months = [];
+            let cur = new Date(Math.min(startDate.getTime(), endDate.getTime()));
+            cur.setDate(1);
+            let last = new Date(Math.max(startDate.getTime(), endDate.getTime()));
+            last.setDate(1);
+            while (cur <= last) {
+                months.push(new Date(cur));
+                cur.setMonth(cur.getMonth() + 1);
+            }
+            months.forEach(monthDate => {
+                container.appendChild(createMonthTable(monthDate, startDate, endDate, holidaysSet));
+            });
+        }
+
+        function createMonthTable(monthDate, start, end, holidaysSet) {
+            const year = monthDate.getFullYear();
+            const month = monthDate.getMonth();
+            const firstDay = new Date(year, month, 1);
+            const lastDay = new Date(year, month + 1, 0);
+            const table = document.createElement('table');
+            table.style.borderCollapse = 'collapse';
+            table.style.margin = '0 auto 24px auto';
+            table.style.background = '#fafbfc';
+            table.style.boxShadow = '0 1px 4px rgba(0,0,0,0.04)';
+            table.style.fontSize = '1rem';
+            table.style.minWidth = '260px';
+            // ヘッダー
+            const caption = document.createElement('caption');
+            caption.textContent = `${year}年${month+1}月`;
+            caption.style.fontWeight = 'bold';
+            caption.style.marginBottom = '4px';
+            table.appendChild(caption);
+            const thead = document.createElement('thead');
+            const trh = document.createElement('tr');
+            ['日','月','火','水','木','金','土'].forEach((d,i) => {
+                const th = document.createElement('th');
+                th.textContent = d;
+                th.style.padding = '2px 6px';
+                th.style.background = i===0 ? '#ffeaea' : i===6 ? '#eaf3ff' : '#eaeaea';
+                th.style.color = i===0 ? '#d32f2f' : i===6 ? '#1976d2' : '#555';
+                th.style.fontWeight = 'bold';
+                trh.appendChild(th);
+            });
+            thead.appendChild(trh);
+            table.appendChild(thead);
+            // ボディ
+            const tbody = document.createElement('tbody');
+            let tr = document.createElement('tr');
+            // 空白セル
+            for(let i=0;i<firstDay.getDay();i++){
+                tr.appendChild(document.createElement('td'));
+            }
+            // 開始日・終了日をgetTime()で比較するために事前に取得
+            // 日付比較用に時刻成分を0:00:00.000に揃える
+            function toYMDTime(date) {
+                return new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
+            }
+            const startTime = toYMDTime(start);
+            const endTime = toYMDTime(end);
+            // 範囲ハイライト用にmin/maxを計算
+            const minTime = Math.min(startTime, endTime);
+            const maxTime = Math.max(startTime, endTime);
+            for(let d=1;d<=lastDay.getDate();d++){
+                const td = document.createElement('td');
+                // curは毎回新規生成
+                const cur = new Date(year, month, d);
+                const curTime = toYMDTime(cur);
+                td.textContent = d;
+                td.style.textAlign = 'center';
+                td.style.padding = '2px 6px';
+                td.style.border = '1px solid #e0e0e0';
+                // 祝日判定
+                const ymd = cur.getFullYear() + '/' + (cur.getMonth()+1) + '/' + cur.getDate();
+                let isHoliday = false;
+                if(holidaysSet.has(ymd)){
+                    td.style.color = '#d32f2f'; // 祝日は必ず赤字
+                    td.title = '祝日';
+                    isHoliday = true;
+                } else if(cur.getDay() === 0){
+                    // 日曜
+                    td.style.color = '#d32f2f';
+                } else if(cur.getDay() === 6){
+                    // 土曜
+                    td.style.color = '#1976d2';
+                }
+                // 範囲内ハイライト（開始日・終了日は除外し、祝日色が優先されるようにbackground未設定時のみ）
+                if(curTime !== startTime && curTime !== endTime && curTime >= minTime && curTime <= maxTime && !td.style.background){
+                    td.style.background = '#cbe7ff';
+                }
+
+                // 開始日・終了日の強調は必ず最後に完全に上書きする
+                if(curTime === startTime){
+                    td.style.background = '#cbe7ff';
+                    td.style.fontWeight = 'bold';
+                    td.title = '開始日';
+                } else if(curTime === endTime){
+                    td.style.background = '#cbe7ff';
+                    td.style.fontWeight = 'bold';
+                    td.title = '終了日';
+                }
+                // 今日
+                const today = new Date();
+                if(cur.getFullYear()===today.getFullYear() && cur.getMonth()===today.getMonth() && cur.getDate()===today.getDate()){
+                    td.style.border = '2px solid #1976d2';
+                }
+                tr.appendChild(td);
+                if(cur.getDay() === 6){
+                    tbody.appendChild(tr);
+                    tr = document.createElement('tr');
+                }
+            }
+            // 残り空白
+            if(tr.children.length>0){
+                for(let i=tr.children.length;i<7;i++){
+                    tr.appendChild(document.createElement('td'));
+                }
+                tbody.appendChild(tr);
+            }
+            table.appendChild(tbody);
+            return table;
+        }
+    </script>
+</body>
+</html>
