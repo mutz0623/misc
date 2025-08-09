@@ -68,6 +68,52 @@
             margin-top: 16px;
             text-align: center;
         }
+        /* ダークモード対応 */
+        @media (prefers-color-scheme: dark) {
+            body {
+                background: #181a1b;
+                color: #e0e0e0;
+            }
+            .container {
+                background: #23272a;
+                box-shadow: 0 2px 12px rgba(0,0,0,0.32);
+            }
+            h1 {
+                color: #e0e0e0;
+            }
+            label {
+                color: #b0b0b0;
+            }
+            input[type="date"] {
+                background: #23272a;
+                color: #e0e0e0;
+                border: 1px solid #444;
+            }
+            button {
+                background: #1565c0;
+                color: #fff;
+            }
+            button:hover {
+                background: #1976d2;
+            }
+            .result {
+                color: #90caf9;
+            }
+            .error {
+                color: #ff8a80;
+            }
+            table {
+                background: #23272a !important;
+                color: #e0e0e0;
+            }
+            th {
+                background: #2c3136 !important;
+                color: #b0b0b0 !important;
+            }
+            td {
+                border: 1px solid #333 !important;
+            }
+        }
     </style>
 </head>
 <body>

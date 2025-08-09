@@ -17,7 +17,24 @@
       margin: 0;
     }
     #qrcode {
-      /* 任意でサイズ調整 */
+  /* クワイエットゾーン用のラッパー */
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background: transparent;
+      width: 240px; /* QR本体+余白 */
+      height: 240px;
+    }
+    .qrcode-quietzone {
+      background: #fff !important;
+      background-color: #fff !important;
+      color-scheme: only light;
+      padding: 20px; /* クワイエットゾーンの幅 */
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+      display: flex;
+      justify-content: center;
+      align-items: center;
       width: 200px;
       height: 200px;
     }
@@ -43,13 +60,18 @@
       const container = document.getElementById('qrcode');
       container.innerHTML = '';
 
+      // クワイエットゾーンdivを作成
+      const quietZone = document.createElement('div');
+      quietZone.className = 'qrcode-quietzone';
+      container.appendChild(quietZone);
+
       // QR コード生成（内容は時刻文字列）
-      new QRCode(container, {
+      new QRCode(quietZone, {
         text:         timeString,
-        width:        200,
-        height:       200,
+        width:        160, // クワイエットゾーン内に収まるよう調整
+        height:       160,
         colorDark:    '#000',
-        colorLight:   '#fff',
+        colorLight:   '#fff', // 白を明示
         correctLevel: QRCode.CorrectLevel.H
       });
     }
