@@ -206,6 +206,31 @@
         <div class="error" id="error"></div>
     </div>
     <script>
+        // 日付入力の相互制約を設定する関数
+        function setDateInputLimits() {
+            const date1 = document.getElementById('date1');
+            const date2 = document.getElementById('date2');
+            if (date1 && date2) {
+                if (date1.value) {
+                    date2.min = date1.value;
+                    // 終了日が開始日より前なら補正
+                    if (date2.value && date2.value < date1.value) {
+                        date2.value = date1.value;
+                    }
+                } else {
+                    date2.removeAttribute('min');
+                }
+                if (date2.value) {
+                    date1.max = date2.value;
+                    // 開始日が終了日より後なら補正
+                    if (date1.value && date1.value > date2.value) {
+                        date1.value = date2.value;
+                    }
+                } else {
+                    date1.removeAttribute('max');
+                }
+            }
+        }
         let holidays = null;
         // クエリパラメータから日付を取得し、inputにセットする関数
         function setDatesFromQuery() {
@@ -237,6 +262,7 @@
                     }
                 }
             }
+            setDateInputLimits();
             // エラーがあれば表示
             if (errorMsg) {
                 const errorDiv = document.getElementById('error');
@@ -357,9 +383,13 @@
             }
             // 日付変更時にカレンダー・計算結果も即時更新
             calcDateSpan();
+            setDateInputLimits();
         }
         document.getElementById('date1').addEventListener('change', updateQueryAndNavigate);
         document.getElementById('date2').addEventListener('change', updateQueryAndNavigate);
+    // 入力欄の手動入力にも対応
+    document.getElementById('date1').addEventListener('input', setDateInputLimits);
+    document.getElementById('date2').addEventListener('input', setDateInputLimits);
 
         // カレンダー描画関数
         function renderCalendar(date1, date2, holidaysSet) {
@@ -494,6 +524,42 @@
     </script>
     <footer style="font-size: 0.9em; color: #666; text-align: center; margin-top: auto; padding: 10px 0;">
         &copy; 2025 Iwata M. All rights reserved.
+    </footer>
+
+    <script>
+    // 日付inputで上下キー時に月をまたぐ場合、正しい日付に補正する
+    function addDateInputArrowKeySupport(id) {
+        const input = document.getElementById(id);
+        if (!input) return;
+        input.addEventListener('keydown', function(e) {
+            if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return;
+            if (!input.value) return;
+            e.preventDefault();
+            let date = new Date(input.value);
+            if (isNaN(date)) return;
+            let delta = (e.key === 'ArrowUp') ? 1 : -1;
+            date.setDate(date.getDate() + delta);
+            // 月をまたいだ場合、日付が存在しない場合は自動補正
+            // 例: 9/31→10/1, 2/29→3/1, 3/1で↓→2/29(うるう年以外は2/28)
+            // input[type=date]のvalueはYYYY-MM-DD
+            function toDateString(d) {
+                const m = String(d.getMonth() + 1).padStart(2, '0');
+                const day = String(d.getDate()).padStart(2, '0');
+                return d.getFullYear() + '-' + m + '-' + day;
+            }
+            // 入力欄のmin/max属性も考慮
+            let min = input.min ? new Date(input.min) : null;
+            let max = input.max ? new Date(input.max) : null;
+            if (min && date < min) date = min;
+            if (max && date > max) date = max;
+            input.value = toDateString(date);
+            // changeイベントを発火させて連動処理
+            input.dispatchEvent(new Event('change', {bubbles:true}));
+        });
+    }
+    addDateInputArrowKeySupport('date1');
+    addDateInputArrowKeySupport('date2');
+    </script>
     </footer>
 </body>
 
