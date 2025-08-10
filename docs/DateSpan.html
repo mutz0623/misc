@@ -351,10 +351,12 @@
                 url.searchParams.delete('start');
                 url.searchParams.delete('end');
             }
-            // 現在のURLと異なる場合のみ遷移
+            // 現在のURLと異なる場合のみHistory APIでURLを書き換え（リロードしない）
             if (window.location.search !== url.search) {
-                window.location.search = url.search;
+                window.history.replaceState(null, '', url.pathname + url.search);
             }
+            // 日付変更時にカレンダー・計算結果も即時更新
+            calcDateSpan();
         }
         document.getElementById('date1').addEventListener('change', updateQueryAndNavigate);
         document.getElementById('date2').addEventListener('change', updateQueryAndNavigate);
