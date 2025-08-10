@@ -240,9 +240,18 @@
             let changed = false;
             let errorMsg = '';
             const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+            // サポートする最小日付
+            const minSupported = '1970-01-01';
+            function isSupportedDate(str) {
+                // YYYY-MM-DD 形式かつ minSupported 以降
+                if (!dateRegex.test(str)) return false;
+                return str >= minSupported;
+            }
             if (start) {
-                if (!dateRegex.test(start)) {
-                    errorMsg = '開始日の形式が正しくありません（YYYY-MM-DD）。';
+                if (!isSupportedDate(start)) {
+                    errorMsg = '開始日の形式が正しくないか、1970-01-01より前の日付です。';
+                    const el = document.getElementById('date1');
+                    if (el) el.value = '';
                 } else {
                     const el = document.getElementById('date1');
                     if (el && el.value !== start) {
@@ -252,8 +261,10 @@
                 }
             }
             if (end) {
-                if (!dateRegex.test(end)) {
-                    errorMsg = (errorMsg ? errorMsg + '\n' : '') + '終了日の形式が正しくありません（YYYY-MM-DD）。';
+                if (!isSupportedDate(end)) {
+                    errorMsg = (errorMsg ? errorMsg + '\n' : '') + '終了日の形式が正しくないか、1970-01-01より前の日付です。';
+                    const el = document.getElementById('date2');
+                    if (el) el.value = '';
                 } else {
                     const el = document.getElementById('date2');
                     if (el && el.value !== end) {
