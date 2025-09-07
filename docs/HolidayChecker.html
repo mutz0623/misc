@@ -140,15 +140,27 @@
             text-decoration: underline;
         }
 
-        footer {
-            text-align: center;
-            margin-top: 2em;
-            font-size: 0.9rem;
-            color: #666;
-            padding: 10px 0;
+        /* カレンダー土日祝色（ライトモード） */
+        td.holiday {
+            color: #d32f2f !important;
         }
 
-        /* ダークテーマ対応 */
+        td.sunday {
+            color: #d32f2f !important;
+        }
+
+        td.saturday {
+            color: #1976d2 !important;
+        }
+
+        /* 選択日のハイライト（共通） */
+        td[data-selected="true"] {
+            background: #cbe7ff !important;
+            color: #333 !important;
+            font-weight: bold;
+        }
+
+        /* ダークモード対応 */
         @media (prefers-color-scheme: dark) {
             body {
                 background-color: #121212;
@@ -197,6 +209,48 @@
             footer {
                 color: #999;
             }
+
+            td.holiday {
+                color: #ff8a80 !important;
+            }
+
+            td.sunday {
+                color: #ff8a80 !important;
+            }
+
+            td.saturday {
+                color: #90caf9 !important;
+            }
+
+            td:not(.holiday):not(.sunday):not(.saturday) {
+                color: #e0e0e0 !important;
+            }
+
+            table {
+                background: #23272a !important;
+                color: #e0e0e0;
+            }
+
+            th {
+                background: #2c3136 !important;
+                color: #b0b0b0 !important;
+            }
+
+            td {
+                border: 1px solid #333 !important;
+            }
+
+            /* 選択日のハイライト（ダークモード上書き） */
+            td[data-selected="true"] {
+                background: #1976d2 !important;
+                color: #fff !important;
+            }
+
+            td[data-selected="true"].holiday,
+            td[data-selected="true"].sunday,
+            td[data-selected="true"].saturday {
+                color: #fff !important;
+            }
         }
     </style>
 </head>
@@ -223,6 +277,7 @@
             <h2 id="monthTitle"></h2>
             <ul id="monthList"></ul>
         </div>
+        <div id="calendarContainer" style="margin-top: 24px;"></div>
         <div id="timestamp"></div>
         <div id="source">
             祝日CSV取得元：
@@ -363,6 +418,102 @@
                         monthList.appendChild(li);
                     });
                 }
+                // カレンダー表示
+                renderCalendar(new Date(iso), holidayMap);
+            }
+
+            // カレンダー描画関数
+            function renderCalendar(date, holidayMap) {
+                const container = document.getElementById('calendarContainer');
+                container.innerHTML = '';
+                const table = createMonthTable(date, holidayMap);
+                container.appendChild(table);
+            }
+
+            function createMonthTable(monthDate, holidayMap) {
+                const year = monthDate.getFullYear();
+                const month = monthDate.getMonth();
+                const firstDay = new Date(year, month, 1);
+                const lastDay = new Date(year, month + 1, 0);
+                const table = document.createElement('table');
+                table.style.borderCollapse = 'collapse';
+                table.style.margin = '0 auto';
+                table.style.background = '#fafbfc';
+                table.style.boxShadow = '0 1px 4px rgba(0,0,0,0.04)';
+                table.style.fontSize = '1rem';
+                table.style.minWidth = '260px';
+
+                // ヘッダー
+                const thead = document.createElement('thead');
+                const trh = document.createElement('tr');
+                ['日', '月', '火', '水', '木', '金', '土'].forEach((d, i) => {
+                    const th = document.createElement('th');
+                    th.textContent = d;
+                    th.style.padding = '2px 6px';
+                    th.style.background = i === 0 ? '#ffeaea' : i === 6 ? '#eaf3ff' : '#eaeaea';
+                    th.style.color = i === 0 ? '#d32f2f' : i === 6 ? '#1976d2' : '#555';
+                    th.style.fontWeight = 'bold';
+                    trh.appendChild(th);
+                });
+                thead.appendChild(trh);
+                table.appendChild(thead);
+
+                // ボディ
+                const tbody = document.createElement('tbody');
+                let tr = document.createElement('tr');
+                // 空白セル
+                for (let i = 0; i < firstDay.getDay(); i++) {
+                    tr.appendChild(document.createElement('td'));
+                }
+
+                for (let d = 1; d <= lastDay.getDate(); d++) {
+                    const td = document.createElement('td');
+                    const cur = new Date(year, month, d);
+                    td.textContent = d;
+                    td.style.textAlign = 'center';
+                    td.style.padding = '2px 6px';
+                    td.style.border = '1px solid #e0e0e0';
+
+                    // ISO文字列を生成する際にタイムゾーンを考慮
+                    function toLocalISODate(date) {
+                        const y = date.getFullYear();
+                        const m = String(date.getMonth() + 1).padStart(2, '0');
+                        const d = String(date.getDate()).padStart(2, '0');
+                        return `${y}-${m}-${d}`;
+                    }
+
+                    const iso = toLocalISODate(cur);
+                    if (holidayMap[iso]) {
+                        td.classList.add('holiday');
+                        td.title = holidayMap[iso];
+                    } else if (cur.getDay() === 0) {
+                        td.classList.add('sunday');
+                    } else if (cur.getDay() === 6) {
+                        td.classList.add('saturday');
+                    }
+
+                    // 選択日（タイムゾーンを考慮した比較）
+                    if (iso === toLocalISODate(monthDate)) {
+                        td.setAttribute('data-selected', 'true');
+                    }
+
+                    tr.appendChild(td);
+                    if (cur.getDay() === 6) {
+                        tbody.appendChild(tr);
+                        tr = document.createElement('tr');
+                    }
+                }
+
+                // 残り空白
+                if (tr.children.length > 0) {
+                    for (let i = tr.children.length; i < 7; i++) {
+                        tr.appendChild(document.createElement('td'));
+                    }
+                    tbody.appendChild(tr);
+                }
+
+                table.appendChild(tbody);
+                return table;
             }
 
             // 日シフト／月シフト／今日
