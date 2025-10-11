@@ -1,199 +1,239 @@
 <!doctype html>
 <html lang="ja">
+
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Color Noise</title>
-<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
-<style>
-  body {
-    font-family: 'Roboto', sans-serif;
-    background-color: #f4f4f9;
-    color: #333;
-    margin: 0;
-    padding: 0;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    min-height: 100vh;
-  }
-  .wrap {
-    background: #fff;
-    padding: 20px 30px;
-    border-radius: 10px;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-    max-width: 720px;
-    width: 90%;
-  }
-  h1 {
-    font-size: 20px;
-    margin: 0 0 12px;
-    font-weight: 700;
-  }
-  .row {
-    display: grid;
-    grid-template-columns: 1fr 140px;
-    gap: 12px;
-    align-items: end;
-    margin: 10px 0;
-  }
-  label {
-    font-size: 12px;
-    color: #666;
-    display: block;
-    margin-bottom: 6px;
-  }
-  select, input[type="number"] {
-    width: 100%;
-    padding: 10px 12px;
-    border-radius: 8px;
-    background: #fff;
-    color: #333;
-    border: 1px solid #ccc;
-  }
-  .controls {
-    display: flex;
-    gap: 10px;
-    margin-top: 14px;
-  }
-  button {
-    padding: 10px 14px;
-    border-radius: 8px;
-    border: 1px solid #ccc;
-    background: #fff;
-    color: #333;
-    cursor: pointer;
-    transition: all 0.3s ease;
-  }
-  button.primary {
-    background: #007BFF;
-    color: #fff;
-    border-color: transparent;
-  }
-  button:hover {
-    background: #f0f0f0;
-  }
-  button.primary:hover {
-    background: #0056b3;
-  }
-  .status {
-    margin-top: 10px;
-    font-size: 12px;
-    color: #666;
-  }
-  .credit {
-    margin-top: 14px;
-    font-size: 11px;
-    color: #666;
-  }
-  a {
-    color: #007BFF;
-    text-decoration: none;
-    transition: color 0.3s ease;
-  }
-  a:hover {
-    color: #0056b3;
-  }
-  .noise-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-    gap: 10px;
-    margin-bottom: 20px;
-  }
-  .noise-button {
-    padding: 12px;
-    border-radius: 8px;
-    border: 1px solid #ccc;
-    background: #fff;
-    color: #333;
-    cursor: pointer;
-    transition: all 0.3s ease;
-  }
-  .noise-button.active {
-    background: #007BFF;
-    color: #fff;
-    border-color: transparent;
-  }
-  .noise-button:hover {
-    background: #f0f0f0;
-  }
-  .noise-button.active:hover {
-    background: #0056b3;
-  }
-  .volume-value {
-    text-align: right;
-    font-size: 12px;
-    color: #666;
-  }
-
-  input[type="range"] {
-    width: 100%;
-    margin: 0;
-  }
-
-  @media (prefers-color-scheme: dark) {
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Color Noise</title>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+  <style>
     body {
-      background-color: #121212;
-      color: #e0e0e0;
+      font-family: 'Roboto', sans-serif;
+      background-color: #f4f4f9;
+      color: #333;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
     }
+
     .wrap {
-      background: #1e1e1e;
-      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.5);
+      background: #fff;
+      padding: 20px 30px;
+      border-radius: 10px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      max-width: 720px;
+      width: 90%;
     }
-    select, input[type="number"] {
-      background: #2d2d2d;
-      color: #e0e0e0;
-      border-color: #404040;
+
+    h1 {
+      font-size: 20px;
+      margin: 0 0 12px;
+      font-weight: 700;
     }
+
+    .row {
+      display: grid;
+      grid-template-columns: 1fr 140px;
+      gap: 12px;
+      align-items: end;
+      margin: 10px 0;
+    }
+
+    label {
+      font-size: 12px;
+      color: #666;
+      display: block;
+      margin-bottom: 6px;
+    }
+
+    select,
+    input[type="number"] {
+      width: 100%;
+      padding: 10px 12px;
+      border-radius: 8px;
+      background: #fff;
+      color: #333;
+      border: 1px solid #ccc;
+    }
+
+    .controls {
+      display: flex;
+      gap: 10px;
+      margin-top: 14px;
+    }
+
     button {
-      background: #2d2d2d;
-      color: #e0e0e0;
-      border-color: #404040;
+      padding: 10px 14px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      background: #fff;
+      color: #333;
+      cursor: pointer;
+      transition: all 0.3s ease;
     }
-    button:hover {
-      background: #3d3d3d;
-    }
+
     button.primary {
-      background: #80bfff;
-      color: #121212;
+      background: #007BFF;
+      color: #fff;
+      border-color: transparent;
     }
+
+    button:hover {
+      background: #f0f0f0;
+    }
+
     button.primary:hover {
-      background: #4da6ff;
+      background: #0056b3;
     }
-    label, .status, .credit {
-      color: #999;
+
+    .status {
+      margin-top: 10px;
+      font-size: 12px;
+      color: #666;
     }
+
+    .credit {
+      margin-top: 14px;
+      font-size: 11px;
+      color: #666;
+    }
+
     a {
-      color: #80bfff;
+      color: #007BFF;
+      text-decoration: none;
+      transition: color 0.3s ease;
     }
+
     a:hover {
-      color: #4da6ff;
+      color: #0056b3;
     }
+
+    .noise-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
     .noise-button {
-      background: #2d2d2d;
-      color: #e0e0e0;
-      border-color: #404040;
+      padding: 12px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      background: #fff;
+      color: #333;
+      cursor: pointer;
+      transition: all 0.3s ease;
     }
-    .noise-button:hover {
-      background: #3d3d3d;
-    }
+
     .noise-button.active {
-      background: #80bfff;
-      color: #121212;
+      background: #007BFF;
+      color: #fff;
+      border-color: transparent;
     }
+
+    .noise-button:hover {
+      background: #f0f0f0;
+    }
+
     .noise-button.active:hover {
-      background: #4da6ff;
+      background: #0056b3;
     }
+
     .volume-value {
-      color: #999;
+      text-align: right;
+      font-size: 12px;
+      color: #666;
     }
-  }
-</style>
+
+    input[type="range"] {
+      width: 100%;
+      margin: 0;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      body {
+        background-color: #121212;
+        color: #e0e0e0;
+      }
+
+      .wrap {
+        background: #1e1e1e;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.5);
+      }
+
+      select,
+      input[type="number"] {
+        background: #2d2d2d;
+        color: #e0e0e0;
+        border-color: #404040;
+      }
+
+      button {
+        background: #2d2d2d;
+        color: #e0e0e0;
+        border-color: #404040;
+      }
+
+      button:hover {
+        background: #3d3d3d;
+      }
+
+      button.primary {
+        background: #80bfff;
+        color: #121212;
+      }
+
+      button.primary:hover {
+        background: #4da6ff;
+      }
+
+      label,
+      .status,
+      .credit {
+        color: #999;
+      }
+
+      a {
+        color: #80bfff;
+      }
+
+      a:hover {
+        color: #4da6ff;
+      }
+
+      .noise-button {
+        background: #2d2d2d;
+        color: #e0e0e0;
+        border-color: #404040;
+      }
+
+      .noise-button:hover {
+        background: #3d3d3d;
+      }
+
+      .noise-button.active {
+        background: #80bfff;
+        color: #121212;
+      }
+
+      .noise-button.active:hover {
+        background: #4da6ff;
+      }
+
+      .volume-value {
+        color: #999;
+      }
+    }
+  </style>
 </head>
+
 <body>
   <div class="wrap">
     <h1>カラーノイズ再生</h1>
-    
+
     <div class="noise-grid" id="noise-grid">
       <button class="noise-button active" data-noise="white">ホワイトノイズ</button>
       <button class="noise-button" data-noise="pink">ピンクノイズ</button>
@@ -210,7 +250,7 @@
       </div>
       <div class="volume-value">30%</div>
     </div>
-    
+
     <div class="row">
       <div>
         <label for="minutes">再生時間</label>
@@ -232,224 +272,225 @@
     <div class="status" id="status">停止中</div>
   </div>
 
-<script>
-(() => {
-  class NoiseGenerator {
-    constructor(context) {
-      this.context = context;
-      this.node = this.context.createScriptProcessor(4096, 1, 1);
-      this.type = 'white';
-    }
-
-    setType(type) {
-      this.type = type;
-    }
-
-    process(e) {
-      const output = e.outputBuffer.getChannelData(0);
-      
-      switch(this.type) {
-        case 'white':
-          for(let i = 0; i < output.length; i++) {
-            output[i] = (Math.random() * 2 - 1) * 0.5; // 音量を半分に
-          }
-          break;
-          
-        case 'pink': {
-          let b0 = 0, b1 = 0, b2 = 0, b3 = 0, b4 = 0, b5 = 0, b6 = 0;
-          for(let i = 0; i < output.length; i++) {
-            const white = Math.random() * 2 - 1;
-            b0 = 0.99886 * b0 + white * 0.0555179;
-            b1 = 0.99332 * b1 + white * 0.0750759;
-            b2 = 0.96900 * b2 + white * 0.1538520;
-            b3 = 0.86650 * b3 + white * 0.3104856;
-            b4 = 0.55000 * b4 + white * 0.5329522;
-            b5 = -0.7616 * b5 - white * 0.0168980;
-            output[i] = (b0 + b1 + b2 + b3 + b4 + b5 + b6 + white * 0.5362) * 0.055; // 0.11から0.055に
-            b6 = white * 0.115926;
-          }
-          break;
+  <script>
+    (() => {
+      class NoiseGenerator {
+        constructor(context) {
+          this.context = context;
+          this.node = this.context.createScriptProcessor(4096, 1, 1);
+          this.type = 'white';
         }
 
-        case 'brown': {
-          let lastOut = 0;
-          for(let i = 0; i < output.length; i++) {
-            const white = Math.random() * 2 - 1;
-            output[i] = (lastOut + (0.02 * white)) / 1.02;
-            lastOut = output[i];
-            output[i] *= 1.75; // 3.5から1.75に
-          }
-          break;
+        setType(type) {
+          this.type = type;
         }
 
-        case 'blue':
-          for(let i = 0; i < output.length; i++) {
-            if (i === 0) {
-              output[i] = (Math.random() * 2 - 1) * 0.5; // 音量を半分に
-            } else {
-              output[i] = 0.25 * (Math.random() * 2 - 1 - output[i-1]); // 0.5から0.25に
+        process(e) {
+          const output = e.outputBuffer.getChannelData(0);
+
+          switch (this.type) {
+            case 'white':
+              for (let i = 0; i < output.length; i++) {
+                output[i] = (Math.random() * 2 - 1) * 0.5; // 音量を半分に
+              }
+              break;
+
+            case 'pink': {
+              let b0 = 0, b1 = 0, b2 = 0, b3 = 0, b4 = 0, b5 = 0, b6 = 0;
+              for (let i = 0; i < output.length; i++) {
+                const white = Math.random() * 2 - 1;
+                b0 = 0.99886 * b0 + white * 0.0555179;
+                b1 = 0.99332 * b1 + white * 0.0750759;
+                b2 = 0.96900 * b2 + white * 0.1538520;
+                b3 = 0.86650 * b3 + white * 0.3104856;
+                b4 = 0.55000 * b4 + white * 0.5329522;
+                b5 = -0.7616 * b5 - white * 0.0168980;
+                output[i] = (b0 + b1 + b2 + b3 + b4 + b5 + b6 + white * 0.5362) * 0.055; // 0.11から0.055に
+                b6 = white * 0.115926;
+              }
+              break;
+            }
+
+            case 'brown': {
+              let lastOut = 0;
+              for (let i = 0; i < output.length; i++) {
+                const white = Math.random() * 2 - 1;
+                output[i] = (lastOut + (0.02 * white)) / 1.02;
+                lastOut = output[i];
+                output[i] *= 1.75; // 3.5から1.75に
+              }
+              break;
+            }
+
+            case 'blue':
+              for (let i = 0; i < output.length; i++) {
+                if (i === 0) {
+                  output[i] = (Math.random() * 2 - 1) * 0.5; // 音量を半分に
+                } else {
+                  output[i] = 0.25 * (Math.random() * 2 - 1 - output[i - 1]); // 0.5から0.25に
+                }
+              }
+              break;
+
+            case 'purple':
+              for (let i = 0; i < output.length; i++) {
+                if (i === 0) {
+                  output[i] = (Math.random() * 2 - 1) * 0.5; // 音量を半分に
+                } else {
+                  output[i] = 0.25 * Math.random() * 2 - 1 + 0.25 * output[i - 1]; // 0.5から0.25に
+                }
+              }
+              break;
+
+            case 'gray': {
+              let lastOut = 0;
+              for (let i = 0; i < output.length; i++) {
+                const white = Math.random() * 2 - 1;
+                output[i] = (lastOut + white) * 0.25; // 0.5から0.25に
+                lastOut = output[i];
+              }
+              break;
             }
           }
-          break;
-
-        case 'purple':
-          for(let i = 0; i < output.length; i++) {
-            if (i === 0) {
-              output[i] = (Math.random() * 2 - 1) * 0.5; // 音量を半分に
-            } else {
-              output[i] = 0.25 * Math.random() * 2 - 1 + 0.25 * output[i-1]; // 0.5から0.25に
-            }
-          }
-          break;
-
-        case 'gray': {
-          let lastOut = 0;
-          for(let i = 0; i < output.length; i++) {
-            const white = Math.random() * 2 - 1;
-            output[i] = (lastOut + white) * 0.25; // 0.5から0.25に
-            lastOut = output[i];
-          }
-          break;
         }
       }
-    }
-  }
 
-  const sel = document.getElementById('noise-grid');
-  const noiseButtons = sel.querySelectorAll('.noise-button');
-  const minutesInput = document.getElementById('minutes');
-  const startBtn = document.getElementById('start');
-  const pauseBtn = document.getElementById('pause');
-  const stopBtn = document.getElementById('stop');
-  const statusEl = document.getElementById('status');
-  const volumeSlider = document.getElementById('volume');
-  const volumeValue = document.querySelector('.volume-value');
+      const sel = document.getElementById('noise-grid');
+      const noiseButtons = sel.querySelectorAll('.noise-button');
+      const minutesInput = document.getElementById('minutes');
+      const startBtn = document.getElementById('start');
+      const pauseBtn = document.getElementById('pause');
+      const stopBtn = document.getElementById('stop');
+      const statusEl = document.getElementById('status');
+      const volumeSlider = document.getElementById('volume');
+      const volumeValue = document.querySelector('.volume-value');
 
-  let wakeLock = null;
-  let audioContext = null;
-  let gainNode = null;
-  let noiseGenerator = null;
-  let endAt = null;
-  let ticker = null;
+      let wakeLock = null;
+      let audioContext = null;
+      let gainNode = null;
+      let noiseGenerator = null;
+      let endAt = null;
+      let ticker = null;
 
-  function updateStatus() {
-    if (!audioContext || audioContext.state === 'suspended') {
-      statusEl.textContent = "停止中";
-      return;
-    }
-    if (endAt) {
-      const remainMs = Math.max(0, endAt - Date.now());
-      const m = Math.floor(remainMs/60000);
-      const s = Math.floor((remainMs%60000)/1000);
-      statusEl.textContent = `再生中 · 残り ${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
-    } else {
-      statusEl.textContent = "再生中 · 無制限";
-    }
-  }
-
-  function start() {
-    if (!audioContext) {
-      audioContext = new (window.AudioContext || window.webkitAudioContext)();
-      gainNode = audioContext.createGain();
-      noiseGenerator = new NoiseGenerator(audioContext);
-      noiseGenerator.node.connect(gainNode);
-      gainNode.connect(audioContext.destination);
-      
-      noiseGenerator.node.onaudioprocess = (e) => noiseGenerator.process(e);
-    }
-
-    const activeButton = sel.querySelector('.noise-button.active');
-    noiseGenerator.setType(activeButton.dataset.noise);
-    
-    const mins = parseFloat(minutesInput.value);
-    endAt = Number.isFinite(mins) && mins > 0 ? Date.now() + mins*60000 : null;
-
-    if ('wakeLock' in navigator) {
-      navigator.wakeLock.request('screen').then(lock => {
-        wakeLock = lock;
-      }).catch(err => console.warn('WakeLock error:', err));
-    }
-
-    audioContext.resume();
-    updateVolume();
-
-    if (ticker) clearInterval(ticker);
-    ticker = setInterval(() => {
-      if (endAt && Date.now() >= endAt) {
-        stop();
-        return;
+      function updateStatus() {
+        if (!audioContext || audioContext.state === 'suspended') {
+          statusEl.textContent = "停止中";
+          return;
+        }
+        if (endAt) {
+          const remainMs = Math.max(0, endAt - Date.now());
+          const m = Math.floor(remainMs / 60000);
+          const s = Math.floor((remainMs % 60000) / 1000);
+          statusEl.textContent = `再生中 · 残り ${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+        } else {
+          statusEl.textContent = "再生中 · 無制限";
+        }
       }
-      updateStatus();
-    }, 16);
-    
-    updateStatus();
-  }
 
-  function stop() {
-    if (ticker) clearInterval(ticker);
-    ticker = null;
-    endAt = null;
-    
-    // WakeLock解放
-    if (wakeLock) {
-      wakeLock.release().then(() => {
-        wakeLock = null;
+      function start() {
+        if (!audioContext) {
+          audioContext = new (window.AudioContext || window.webkitAudioContext)();
+          gainNode = audioContext.createGain();
+          noiseGenerator = new NoiseGenerator(audioContext);
+          noiseGenerator.node.connect(gainNode);
+          gainNode.connect(audioContext.destination);
+
+          noiseGenerator.node.onaudioprocess = (e) => noiseGenerator.process(e);
+        }
+
+        const activeButton = sel.querySelector('.noise-button.active');
+        noiseGenerator.setType(activeButton.dataset.noise);
+
+        const mins = parseFloat(minutesInput.value);
+        endAt = Number.isFinite(mins) && mins > 0 ? Date.now() + mins * 60000 : null;
+
+        if ('wakeLock' in navigator) {
+          navigator.wakeLock.request('screen').then(lock => {
+            wakeLock = lock;
+          }).catch(err => console.warn('WakeLock error:', err));
+        }
+
+        audioContext.resume();
+        updateVolume();
+
+        if (ticker) clearInterval(ticker);
+        ticker = setInterval(() => {
+          if (endAt && Date.now() >= endAt) {
+            stop();
+            return;
+          }
+          updateStatus();
+        }, 16);
+
+        updateStatus();
+      }
+
+      function stop() {
+        if (ticker) clearInterval(ticker);
+        ticker = null;
+        endAt = null;
+
+        // WakeLock解放
+        if (wakeLock) {
+          wakeLock.release().then(() => {
+            wakeLock = null;
+          });
+        }
+
+        // フェードアウトして停止
+        if (audioContext) {
+          const now = audioContext.currentTime;
+          gainNode.gain.setValueAtTime(gainNode.gain.value, now);
+          gainNode.gain.linearRampToValueAtTime(0, now + 0.2);
+        }
+
+        setTimeout(() => {
+          if (audioContext) {
+            audioContext.suspend();
+          }
+          updateStatus();
+        }, 250);
+      }
+
+      function updateVolume() {
+        if (!gainNode) return;
+        const volume = volumeSlider.value / 100;
+        volumeValue.textContent = `${volumeSlider.value}%`;
+        gainNode.gain.setValueAtTime(volume, audioContext?.currentTime || 0);
+      }
+
+      volumeSlider.addEventListener('input', updateVolume);
+
+      startBtn.addEventListener('click', start);
+      pauseBtn.addEventListener('click', () => {
+        if (audioContext && audioContext.state !== 'suspended') {
+          audioContext.suspend();
+          statusEl.textContent = "一時停止中";
+        } else {
+          audioContext.resume();
+          statusEl.textContent = "再生中";
+        }
       });
-    }
-    
-    // フェードアウトして停止
-    if (audioContext) {
-      const now = audioContext.currentTime;
-      gainNode.gain.setValueAtTime(gainNode.gain.value, now);
-      gainNode.gain.linearRampToValueAtTime(0, now + 0.2);
-    }
-    
-    setTimeout(() => {
-      if (audioContext) {
-        audioContext.suspend();
-      }
-      updateStatus();
-    }, 250);
-  }
+      stopBtn.addEventListener('click', stop);
 
-  function updateVolume() {
-    if (!gainNode) return;
-    const volume = volumeSlider.value / 100;
-    volumeValue.textContent = `${volumeSlider.value}%`;
-    gainNode.gain.setValueAtTime(volume, audioContext?.currentTime || 0);
-  }
+      // ノイズボタンのイベントリスナー
+      noiseButtons.forEach(btn => {
+        btn.addEventListener('click', () => {
+          noiseButtons.forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          if (noiseGenerator) {
+            noiseGenerator.setType(btn.dataset.noise);
+          }
+        });
+      });
 
-  volumeSlider.addEventListener('input', updateVolume);
+      // クレジット表示を削除
+      const creditEl = document.getElementById('credit');
+      creditEl.remove();
 
-  startBtn.addEventListener('click', start);
-  pauseBtn.addEventListener('click', () => {
-    if (audioContext && audioContext.state !== 'suspended') {
-      audioContext.suspend();
-      statusEl.textContent = "一時停止中";
-    } else {
-      audioContext.resume();
-      statusEl.textContent = "再生中";
-    }
-  });
-  stopBtn.addEventListener('click', stop);
-
-  // ノイズボタンのイベントリスナー
-  noiseButtons.forEach(btn => {
-    btn.addEventListener('click', () => {
-      noiseButtons.forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      if (noiseGenerator) {
-        noiseGenerator.setType(btn.dataset.noise);
-      }
-    });
-  });
-
-  // クレジット表示を削除
-  const creditEl = document.getElementById('credit');
-  creditEl.remove();
-
-  window.addEventListener('unload', stop);
-})();
-</script>
+      window.addEventListener('unload', stop);
+    })();
+  </script>
 </body>
+
 </html>
