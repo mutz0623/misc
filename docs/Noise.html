@@ -153,6 +153,12 @@
       margin: 0;
     }
 
+    .hint {
+      font-size: 11px;
+      opacity: 0.7;
+      margin-left: 4px;
+    }
+
     @media (prefers-color-scheme: dark) {
       body {
         background-color: #121212;
@@ -265,7 +271,6 @@
 
     <div class="controls">
       <button id="start" class="primary">再生</button>
-      <button id="pause">一時停止/再開</button>
       <button id="stop">停止</button>
     </div>
 
@@ -279,10 +284,18 @@
           this.context = context;
           this.node = this.context.createScriptProcessor(4096, 1, 1);
           this.type = 'white';
+          this.lastOutput = 0;
+          this.pinkNoise = { b0: 0, b1: 0, b2: 0, b3: 0, b4: 0, b5: 0, b6: 0 };
+        }
+
+        reset() {
+          this.lastOutput = 0;
+          this.pinkNoise = { b0: 0, b1: 0, b2: 0, b3: 0, b4: 0, b5: 0, b6: 0 };
         }
 
         setType(type) {
           this.type = type;
+          this.reset();
         }
 
         process(e) {
@@ -291,66 +304,60 @@
           switch (this.type) {
             case 'white':
               for (let i = 0; i < output.length; i++) {
-                output[i] = (Math.random() * 2 - 1) * 0.5; // 音量を半分に
+                output[i] = (Math.random() * 2 - 1) * 0.5;
               }
               break;
 
             case 'pink': {
-              let b0 = 0, b1 = 0, b2 = 0, b3 = 0, b4 = 0, b5 = 0, b6 = 0;
+              const p = this.pinkNoise;
               for (let i = 0; i < output.length; i++) {
                 const white = Math.random() * 2 - 1;
-                b0 = 0.99886 * b0 + white * 0.0555179;
-                b1 = 0.99332 * b1 + white * 0.0750759;
-                b2 = 0.96900 * b2 + white * 0.1538520;
-                b3 = 0.86650 * b3 + white * 0.3104856;
-                b4 = 0.55000 * b4 + white * 0.5329522;
-                b5 = -0.7616 * b5 - white * 0.0168980;
-                output[i] = (b0 + b1 + b2 + b3 + b4 + b5 + b6 + white * 0.5362) * 0.055; // 0.11から0.055に
-                b6 = white * 0.115926;
+                p.b0 = 0.99886 * p.b0 + white * 0.0555179;
+                p.b1 = 0.99332 * p.b1 + white * 0.0750759;
+                p.b2 = 0.96900 * p.b2 + white * 0.1538520;
+                p.b3 = 0.86650 * p.b3 + white * 0.3104856;
+                p.b4 = 0.55000 * p.b4 + white * 0.5329522;
+                p.b5 = -0.7616 * p.b5 - white * 0.0168980;
+                output[i] = (p.b0 + p.b1 + p.b2 + p.b3 + p.b4 + p.b5 + p.b6 + white * 0.5362) * 0.11;
+                p.b6 = white * 0.115926;
               }
               break;
             }
 
-            case 'brown': {
-              let lastOut = 0;
+            case 'brown':
               for (let i = 0; i < output.length; i++) {
                 const white = Math.random() * 2 - 1;
-                output[i] = (lastOut + (0.02 * white)) / 1.02;
-                lastOut = output[i];
-                output[i] *= 1.75; // 3.5から1.75に
+                this.lastOutput = (this.lastOutput + (0.016 * white)) / 1.016;
+                output[i] = this.lastOutput * 3.0;  // 3.5 -> 3.0に調整
               }
               break;
-            }
 
             case 'blue':
               for (let i = 0; i < output.length; i++) {
-                if (i === 0) {
-                  output[i] = (Math.random() * 2 - 1) * 0.5; // 音量を半分に
-                } else {
-                  output[i] = 0.25 * (Math.random() * 2 - 1 - output[i - 1]); // 0.5から0.25に
-                }
+                const white = Math.random() * 2 - 1;
+                this.lastOutput = 0.98 * this.lastOutput + white;
+                output[i] = (white - this.lastOutput) * 0.05;  // 0.5 -> 0.05に調整
               }
               break;
 
             case 'purple':
               for (let i = 0; i < output.length; i++) {
-                if (i === 0) {
-                  output[i] = (Math.random() * 2 - 1) * 0.5; // 音量を半分に
-                } else {
-                  output[i] = 0.25 * Math.random() * 2 - 1 + 0.25 * output[i - 1]; // 0.5から0.25に
-                }
+                const white = Math.random() * 2 - 1;
+                const highFreq = white - this.lastOutput;
+                this.lastOutput = white;
+                output[i] = (highFreq + this.lastOutput * 0.8) * 0.25;  // 0.35 -> 0.25に調整
               }
               break;
 
-            case 'gray': {
-              let lastOut = 0;
+            case 'gray':
               for (let i = 0; i < output.length; i++) {
-                const white = Math.random() * 2 - 1;
-                output[i] = (lastOut + white) * 0.25; // 0.5から0.25に
-                lastOut = output[i];
+                let sum = 0;
+                for (let j = 0; j < 6; j++) {
+                  sum += Math.random() * 2 - 1;
+                }
+                output[i] = (sum / 6) * 0.5;
               }
               break;
-            }
           }
         }
       }
@@ -359,7 +366,6 @@
       const noiseButtons = sel.querySelectorAll('.noise-button');
       const minutesInput = document.getElementById('minutes');
       const startBtn = document.getElementById('start');
-      const pauseBtn = document.getElementById('pause');
       const stopBtn = document.getElementById('stop');
       const statusEl = document.getElementById('status');
       const volumeSlider = document.getElementById('volume');
@@ -369,8 +375,40 @@
       let audioContext = null;
       let gainNode = null;
       let noiseGenerator = null;
+      let currentGenerator = null;  // 現在のジェネレーター
       let endAt = null;
       let ticker = null;
+      let isInitialized = false;
+      let pressTimer = null;
+
+      function cleanupAudio() {
+        if (noiseGenerator) {
+          noiseGenerator.node.disconnect();
+          noiseGenerator = null;
+        }
+        if (gainNode) {
+          gainNode.disconnect();
+          gainNode = null;
+        }
+        if (audioContext) {
+          audioContext.close();
+          audioContext = null;
+        }
+        isInitialized = false;
+      }
+
+      function initAudio() {
+        cleanupAudio();
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        gainNode = audioContext.createGain();
+        noiseGenerator = new NoiseGenerator(audioContext);
+        currentGenerator = noiseGenerator;  // 現在のジェネレーターを設定
+        noiseGenerator.node.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+        noiseGenerator.node.onaudioprocess = (e) => noiseGenerator.process(e);
+        gainNode.gain.setValueAtTime(0, audioContext.currentTime);
+        isInitialized = true;
+      }
 
       function updateStatus() {
         if (!audioContext || audioContext.state === 'suspended') {
@@ -388,15 +426,7 @@
       }
 
       function start() {
-        if (!audioContext) {
-          audioContext = new (window.AudioContext || window.webkitAudioContext)();
-          gainNode = audioContext.createGain();
-          noiseGenerator = new NoiseGenerator(audioContext);
-          noiseGenerator.node.connect(gainNode);
-          gainNode.connect(audioContext.destination);
-
-          noiseGenerator.node.onaudioprocess = (e) => noiseGenerator.process(e);
-        }
+        initAudio();
 
         const activeButton = sel.querySelector('.noise-button.active');
         noiseGenerator.setType(activeButton.dataset.noise);
@@ -405,21 +435,24 @@
         endAt = Number.isFinite(mins) && mins > 0 ? Date.now() + mins * 60000 : null;
 
         if ('wakeLock' in navigator) {
-          navigator.wakeLock.request('screen').then(lock => {
-            wakeLock = lock;
-          }).catch(err => console.warn('WakeLock error:', err));
+            navigator.wakeLock.request('screen').then(lock => {
+                wakeLock = lock;
+            }).catch(err => console.warn('WakeLock error:', err));
         }
 
-        audioContext.resume();
-        updateVolume();
+        // フェードイン
+        const volume = volumeSlider.value / 100;
+        const now = audioContext.currentTime;
+        gainNode.gain.setValueAtTime(0, now);
+        gainNode.gain.linearRampToValueAtTime(volume, now + 0.5);
 
         if (ticker) clearInterval(ticker);
         ticker = setInterval(() => {
-          if (endAt && Date.now() >= endAt) {
-            stop();
-            return;
-          }
-          updateStatus();
+            if (endAt && Date.now() >= endAt) {
+                stop();
+                return;
+            }
+            updateStatus();
         }, 16);
 
         updateStatus();
@@ -430,26 +463,22 @@
         ticker = null;
         endAt = null;
 
-        // WakeLock解放
         if (wakeLock) {
-          wakeLock.release().then(() => {
-            wakeLock = null;
-          });
+            wakeLock.release().then(() => {
+                wakeLock = null;
+            });
         }
 
-        // フェードアウトして停止
         if (audioContext) {
-          const now = audioContext.currentTime;
-          gainNode.gain.setValueAtTime(gainNode.gain.value, now);
-          gainNode.gain.linearRampToValueAtTime(0, now + 0.2);
-        }
+            const now = audioContext.currentTime;
+            gainNode.gain.setValueAtTime(gainNode.gain.value, now);
+            gainNode.gain.linearRampToValueAtTime(0, now + 0.5);
 
-        setTimeout(() => {
-          if (audioContext) {
-            audioContext.suspend();
-          }
-          updateStatus();
-        }, 250);
+            setTimeout(() => {
+                cleanupAudio();
+                updateStatus();
+            }, 600);
+        }
       }
 
       function updateVolume() {
@@ -461,16 +490,15 @@
 
       volumeSlider.addEventListener('input', updateVolume);
 
-      startBtn.addEventListener('click', start);
-      pauseBtn.addEventListener('click', () => {
-        if (audioContext && audioContext.state !== 'suspended') {
-          audioContext.suspend();
-          statusEl.textContent = "一時停止中";
-        } else {
-          audioContext.resume();
-          statusEl.textContent = "再生中";
+      startBtn.addEventListener('click', () => {
+        try {
+          start();
+        } catch (error) {
+          console.error('Audio start error:', error);
+          statusEl.textContent = "エラー: 音声の開始に失敗しました";
         }
       });
+
       stopBtn.addEventListener('click', stop);
 
       // ノイズボタンのイベントリスナー
@@ -478,8 +506,39 @@
         btn.addEventListener('click', () => {
           noiseButtons.forEach(b => b.classList.remove('active'));
           btn.classList.add('active');
-          if (noiseGenerator) {
-            noiseGenerator.setType(btn.dataset.noise);
+          
+          if (noiseGenerator && audioContext) {
+            const now = audioContext.currentTime;
+            const currentVolume = gainNode.gain.value;
+            const crossFadeDuration = 1.0; // クロスフェードの時間（秒）
+            
+            // 新しいノイズジェネレーターとゲインノードを作成
+            const newGenerator = new NoiseGenerator(audioContext);
+            const newGain = audioContext.createGain();
+            newGenerator.setType(btn.dataset.noise);
+            newGenerator.node.connect(newGain);
+            newGain.connect(audioContext.destination);
+            newGenerator.node.onaudioprocess = (e) => newGenerator.process(e);
+            
+            // 古いゲインをフェードアウト
+            gainNode.gain.setValueAtTime(currentVolume, now);
+            gainNode.gain.linearRampToValueAtTime(0, now + crossFadeDuration);
+            
+            // 新しいゲインをフェードイン
+            newGain.gain.setValueAtTime(0, now);
+            newGain.gain.linearRampToValueAtTime(currentVolume, now + crossFadeDuration);
+            
+            // クロスフェード完了後に古いノイズを切断
+            setTimeout(() => {
+              if (currentGenerator) {
+                currentGenerator.node.disconnect();
+                gainNode.disconnect();
+              }
+              currentGenerator = newGenerator;
+              gainNode = newGain;
+            }, crossFadeDuration * 1000);
+            
+            noiseGenerator = newGenerator;
           }
         });
       });
@@ -488,9 +547,8 @@
       const creditEl = document.getElementById('credit');
       creditEl.remove();
 
-      window.addEventListener('unload', stop);
+      window.addEventListener('unload', cleanupAudio);
     })();
-  </script>
-</body>
-
+    </script>
+    </body>
 </html>
