@@ -1,0 +1,310 @@
+<!doctype html>
+<html lang="ja">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Mic Spectrum Viewer</title>
+    <style>
+        :root {
+            color-scheme: dark;
+        }
+
+        html,
+        body {
+            height: 100%;
+            margin: 0;
+            background: #000;
+            font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Hiragino Sans", "Noto Sans JP", sans-serif;
+            color: #fff;
+        }
+
+        .wrap {
+            display: grid;
+            place-items: center;
+            gap: 24px;
+            height: 100%;
+            padding: 24px;
+        }
+
+        canvas {
+            width: min(1100px, 95vw);
+            height: 52vh;
+            background: #111;
+            border-radius: 4px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, .35);
+        }
+
+        .row {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: center;
+        }
+
+        button,
+        select {
+            appearance: none;
+            border: 1px solid #333;
+            background: #222;
+            color: #fff;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        button.primary {
+            background: #0066cc;
+            border-color: #0066cc;
+        }
+
+        button[disabled] {
+            opacity: .5;
+            cursor: not-allowed;
+        }
+
+        .meter {
+            height: 4px;
+            width: min(1100px, 95vw);
+            background: #222;
+            border-radius: 2px;
+            overflow: hidden;
+        }
+
+        .bar {
+            height: 100%;
+            width: 0%;
+            background: #0066cc;
+            transition: width .1s linear;
+        }
+
+        small {
+            opacity: .7;
+            font-size: 12px;
+        }
+
+        .err {
+            color: #ff4444
+        }
+    </style>
+</head>
+
+<body>
+    <div class="wrap">
+        <canvas id="fft"></canvas>
+        <div class="meter" aria-hidden="true">
+            <div class="bar" id="lvl"></div>
+        </div>
+        <div class="row">
+            <button id="start" class="primary">マイク開始</button>
+            <button id="stop" disabled>停止</button>
+            <label>FFTサイズ:
+                <select id="fftSize">
+                    <option>512</option>
+                    <option selected>1024</option>
+                    <option>2048</option>
+                    <option>4096</option>
+                    <option>8192</option>
+                </select>
+            </label>
+            <label>スムージング:
+                <select id="smoothing">
+                    <option>0.0</option>
+                    <option>0.5</option>
+                    <option selected>0.7</option>
+                    <option>0.8</option>
+                    <option>0.9</option>
+                </select>
+            </label>
+            <small id="meta"></small>
+        </div>
+        <small>ヒント: イヤホン推奨。入力デバイスはOS設定で切替。Androidの場合は「設定」→「アプリ」→「Chrome」→「権限」でマイクを許可してください。</small>
+        <small id="err" class="err"></small>
+    </div>
+
+    <script>
+        const $ = (s) => document.querySelector(s);
+        const canvas = $('#fft');
+        const ctx = canvas.getContext('2d', { alpha: false });
+        const startBtn = $('#start');
+        const stopBtn = $('#stop');
+        const fftSel = $('#fftSize');
+        const smoothSel = $('#smoothing');
+        const lvlBar = $('#lvl');
+        const errEl = $('#err');
+        const metaEl = $('#meta');
+
+        let ac, analyser, mic, data, raf, mediaStream;
+
+        // HiDPI-safe resize
+        function resize() {
+            const dpr = Math.max(1, Math.min(3, window.devicePixelRatio || 1));
+            const rect = canvas.getBoundingClientRect();
+            canvas.width = Math.round(rect.width * dpr);
+            canvas.height = Math.round(rect.height * dpr);
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0); // draw in CSS pixels
+            drawGrid();
+        }
+        window.addEventListener('resize', resize, { passive: true });
+
+        function drawGrid() {
+            const w = canvas.clientWidth, h = canvas.clientHeight;
+            ctx.clearRect(0, 0, w, h);
+            // 背景塗りつぶし
+            ctx.fillStyle = '#111';
+            ctx.fillRect(0, 0, w, h);
+            // グリッド線
+            ctx.globalAlpha = 0.2;  // 透明度を下げる
+            const grid = ctx;
+            grid.strokeStyle = '#999';
+            grid.lineWidth = 1;
+            grid.beginPath();
+            const freqs = [50, 100, 200, 500, 1000, 2000, 5000, 10000, 16000];
+            for (const f of freqs) {
+                const x = freqToX(f, w);
+                grid.moveTo(x, 0); grid.lineTo(x, h);
+            }
+            grid.stroke();
+            // 周波数テキスト
+            grid.fillStyle = '#999';
+            grid.font = '12px system-ui, sans-serif';
+            grid.textAlign = 'left';
+            grid.textBaseline = 'top';
+            for (const f of freqs) {
+                const x = Math.min(freqToX(f, w) + 4, w - 40);
+                grid.fillText(`${f >= 1000 ? (f / 1000) + 'k' : f} Hz`, x, 4);
+            }
+            ctx.globalAlpha = 1;  // 元に戻す
+        }
+
+        function freqToX(freq, width) {
+            if (!analyser) return 0;
+            // map frequency to bin index then to x (linear across width)
+            const bin = Math.min(analyser.frequencyBinCount - 1, Math.round(freq / (ac.sampleRate / 2) * (analyser.frequencyBinCount - 1)));
+            return bin / (analyser.frequencyBinCount - 1) * width;
+        }
+
+        async function start() {
+            try {
+                startBtn.disabled = true;
+                errEl.textContent = '';
+                mediaStream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false }, video: false });
+                ac = new (window.AudioContext || window.webkitAudioContext)();
+                mic = ac.createMediaStreamSource(mediaStream);
+                analyser = ac.createAnalyser();
+                setAnalyserParams();
+                mic.connect(analyser);
+                loop();
+                stopBtn.disabled = false;
+                metaEl.textContent = `sr ${ac.sampleRate} Hz | bins ${analyser.frequencyBinCount}`;
+            } catch (e) {
+                const isAndroid = /Android/i.test(navigator.userAgent);
+                const hint = isAndroid ?
+                    '【対処方法】\n1. 画面上部の🔒をタップしてマイクを許可\n2. それでも失敗する場合: 端末の設定→アプリ→Chrome→権限→マイクを許可' :
+                    'マイクの許可を確認してください';
+                errEl.textContent = `マイクを使用できません: ${e.message || e}\n${hint}`;
+                startBtn.disabled = false;
+            }
+        }
+
+        function setAnalyserParams() {
+            const newFftSize = parseInt(fftSel.value, 10);
+            const newSmoothing = parseFloat(smoothSel.value);
+
+            if (analyser.fftSize !== newFftSize) {
+                analyser.fftSize = newFftSize;
+                data = new Uint8Array(analyser.frequencyBinCount);
+            }
+            analyser.smoothingTimeConstant = newSmoothing;
+
+            drawGrid();
+            metaEl.textContent = `sr ${ac?.sampleRate || 0} Hz | bins ${analyser.frequencyBinCount}`;
+        }
+
+        function stop() {
+            cancelAnimationFrame(raf);
+            if (mediaStream) {
+                mediaStream.getTracks().forEach(t => t.stop());
+                mediaStream = null;
+            }
+            if (ac && ac.state !== 'closed') ac.close();
+            ac = analyser = mic = null;
+            lvlBar.style.width = '0%';
+            stopBtn.disabled = true;
+            startBtn.disabled = false;
+        }
+
+        function loop() {
+            analyser.getByteFrequencyData(data);
+            renderSpectrum(data);
+            raf = requestAnimationFrame(loop);
+        }
+
+        function renderSpectrum(arr) {
+            const w = canvas.clientWidth, h = canvas.clientHeight;
+
+            // グリッドを描画
+            drawGrid();
+
+            const n = arr.length;
+            // bar settings
+            const barGap = 1;
+            const barCount = Math.min(n, Math.floor(w / (barGap + 2)));
+            const step = n / barCount;
+
+            let peak = 0;
+            for (let i = 0; i < barCount; i++) {
+                // average within bin range
+                const a = Math.floor(i * step);
+                const b = Math.floor((i + 1) * step);
+                let sum = 0;
+                for (let k = a; k < b; k++) sum += arr[k];
+                const v = sum / Math.max(1, (b - a));
+                peak = Math.max(peak, v);
+
+                const mag = v / 255;            // 0..1
+                const x = i * (w / barCount);
+                const bw = Math.max(1, (w / barCount) - barGap);
+                const bh = mag * (h - 18);
+                const y = h - bh;
+
+                // gradient per bar height
+                const g = ctx.createLinearGradient(0, y, 0, h);
+                g.addColorStop(0.00, '#60a5fa');
+                g.addColorStop(0.45, '#34d399');
+                g.addColorStop(0.85, '#f59e0b');
+                g.addColorStop(1.00, '#ef4444');
+                ctx.fillStyle = g;
+                ctx.fillRect(x, y, bw, bh);
+            }
+            ctx.globalAlpha = 0.9;  // バーの透明度を設定
+            // level meter
+            lvlBar.style.width = ((peak / 255) * 100).toFixed(1) + '%';
+            ctx.globalAlpha = 1;
+        }
+
+        // UI wiring
+        startBtn.addEventListener('click', async () => {
+            if (ac && ac.state === 'suspended') await ac.resume();
+            if (!mediaStream) {
+                await start();
+            }
+        });
+        stopBtn.addEventListener('click', stop);
+        fftSel.addEventListener('change', () => analyser && setAnalyserParams());
+        smoothSel.addEventListener('change', () => analyser && setAnalyserParams());
+
+        document.addEventListener('visibilitychange', () => {
+            if (!ac) return;
+            if (document.hidden && ac.state === 'running') ac.suspend();
+            else if (!document.hidden && ac.state === 'suspended') ac.resume();
+        });
+
+        // prepare canvas
+        resize();
+    </script>
+</body>
+
+</html>
