@@ -435,9 +435,9 @@
         endAt = Number.isFinite(mins) && mins > 0 ? Date.now() + mins * 60000 : null;
 
         if ('wakeLock' in navigator) {
-            navigator.wakeLock.request('screen').then(lock => {
-                wakeLock = lock;
-            }).catch(err => console.warn('WakeLock error:', err));
+          navigator.wakeLock.request('screen').then(lock => {
+            wakeLock = lock;
+          }).catch(err => console.warn('WakeLock error:', err));
         }
 
         // フェードイン
@@ -448,11 +448,11 @@
 
         if (ticker) clearInterval(ticker);
         ticker = setInterval(() => {
-            if (endAt && Date.now() >= endAt) {
-                stop();
-                return;
-            }
-            updateStatus();
+          if (endAt && Date.now() >= endAt) {
+            stop();
+            return;
+          }
+          updateStatus();
         }, 16);
 
         updateStatus();
@@ -464,20 +464,20 @@
         endAt = null;
 
         if (wakeLock) {
-            wakeLock.release().then(() => {
-                wakeLock = null;
-            });
+          wakeLock.release().then(() => {
+            wakeLock = null;
+          });
         }
 
         if (audioContext) {
-            const now = audioContext.currentTime;
-            gainNode.gain.setValueAtTime(gainNode.gain.value, now);
-            gainNode.gain.linearRampToValueAtTime(0, now + 0.5);
+          const now = audioContext.currentTime;
+          gainNode.gain.setValueAtTime(gainNode.gain.value, now);
+          gainNode.gain.linearRampToValueAtTime(0, now + 0.5);
 
-            setTimeout(() => {
-                cleanupAudio();
-                updateStatus();
-            }, 600);
+          setTimeout(() => {
+            cleanupAudio();
+            updateStatus();
+          }, 600);
         }
       }
 
@@ -506,12 +506,12 @@
         btn.addEventListener('click', () => {
           noiseButtons.forEach(b => b.classList.remove('active'));
           btn.classList.add('active');
-          
+
           if (noiseGenerator && audioContext) {
             const now = audioContext.currentTime;
             const currentVolume = gainNode.gain.value;
             const crossFadeDuration = 1.0; // クロスフェードの時間（秒）
-            
+
             // 新しいノイズジェネレーターとゲインノードを作成
             const newGenerator = new NoiseGenerator(audioContext);
             const newGain = audioContext.createGain();
@@ -519,15 +519,15 @@
             newGenerator.node.connect(newGain);
             newGain.connect(audioContext.destination);
             newGenerator.node.onaudioprocess = (e) => newGenerator.process(e);
-            
+
             // 古いゲインをフェードアウト
             gainNode.gain.setValueAtTime(currentVolume, now);
             gainNode.gain.linearRampToValueAtTime(0, now + crossFadeDuration);
-            
+
             // 新しいゲインをフェードイン
             newGain.gain.setValueAtTime(0, now);
             newGain.gain.linearRampToValueAtTime(currentVolume, now + crossFadeDuration);
-            
+
             // クロスフェード完了後に古いノイズを切断
             setTimeout(() => {
               if (currentGenerator) {
@@ -537,7 +537,7 @@
               currentGenerator = newGenerator;
               gainNode = newGain;
             }, crossFadeDuration * 1000);
-            
+
             noiseGenerator = newGenerator;
           }
         });
@@ -549,6 +549,7 @@
 
       window.addEventListener('unload', cleanupAudio);
     })();
-    </script>
-    </body>
+  </script>
+</body>
+
 </html>
