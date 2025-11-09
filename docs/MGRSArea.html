@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+  <meta charset="utf-8" />
+  <title>MGRS グリッド範囲計算</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Roboto', ui-sans-serif, system-ui, Segoe UI, Arial, sans-serif;
+      background-color: #f4f4f9;
+      color: #333;
+      margin: 0;
+      padding: 1rem;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      box-sizing: border-box;
+    }
+
+    header {
+      padding: 24px 0 10px 0;
+      text-align: center;
+    }
+
+    header h1 {
+      margin: 0;
+      font-size: 1.4rem;
+      letter-spacing: .5px;
+    }
+
+    main {
+      width: 100%;
+      max-width: 700px;
+      margin: 0 auto;
+      padding: 0;
+      flex: 1 0 auto;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .card {
+      background: #fff;
+      border-radius: 12px;
+      padding: 24px 18px 18px 18px;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.10);
+      width: 100%;
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    label {
+      display: block;
+      font-size: .98rem;
+      color: #333;
+      margin-bottom: 6px;
+      font-weight: 700;
+    }
+
+    input[type="text"] {
+      width: 100%;
+      padding: 10px 14px;
+      border: 1px solid #b0b8c9;
+      border-radius: 10px;
+      background: #f8fafc;
+      color: #222;
+      outline: none;
+      font-size: 1rem;
+      transition: .18s;
+      margin-bottom: 0.5rem;
+    }
+
+    input[type="text"]:focus {
+      border-color: #22c55e;
+      box-shadow: 0 0 0 4px rgba(34, 197, 94, .08);
+    }
+
+    .controls {
+      display: flex;
+      gap: .75rem;
+      align-items: center;
+      margin-top: 8px;
+      flex-wrap: wrap;
+    }
+
+    button {
+      background: linear-gradient(90deg, #22c55e, #16a34a);
+      color: white;
+      border: none;
+      padding: 10px 18px;
+      border-radius: 10px;
+      cursor: pointer;
+      font-weight: 700;
+      letter-spacing: .3px;
+      box-shadow: 0 4px 12px rgba(34, 197, 94, .10);
+      font-size: 1rem;
+    }
+
+    button.secondary {
+      background: #b0b8c9;
+      color: #222;
+      font-weight: 600;
+    }
+
+    .error {
+      color: #ef4444;
+      margin-top: 10px;
+      font-weight: 700;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 12px;
+      margin-top: 16px;
+    }
+
+    .kv {
+      background: #f8fafc;
+      border: 1px solid #e0e7ef;
+      border-radius: 10px;
+      padding: 12px;
+    }
+
+    .muted {
+      color: #94a3b8;
+      font-size: .88rem;
+      margin-bottom: 6px;
+    }
+
+    code,
+    var {
+      background: #e6eef6;
+      padding: 2px 6px;
+      border-radius: 6px;
+      color: #222;
+    }
+
+    .footer {
+      color: #94a3b8;
+      font-size: .85rem;
+      margin-top: 12px;
+    }
+
+    .mono {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+    }
+
+    .result-block {
+      white-space: pre-wrap;
+      word-break: break-word;
+      color: #222;
+    }
+
+    .value {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: #222;
+      margin-top: 6px;
+    }
+
+    .value .accent {
+      color: #22c55e;
+      font-weight: 800;
+    }
+
+    @media (max-width:520px) {
+      header h1 {
+        font-size: 1.15rem;
+      }
+
+      .card {
+        padding: 12px 4px 8px 4px;
+      }
+    }
+
+    /* ダークテーマ対応 */
+    @media (prefers-color-scheme: dark) {
+      body {
+        background-color: #121212;
+        color: #e0e0e0;
+      }
+
+      .card {
+        background: #1e1e1e;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+      }
+
+      .kv {
+        background: #23272f;
+        border: 1px solid #23272f;
+      }
+
+      input[type="text"] {
+        background: #23272f;
+        color: #e0e0e0;
+        border: 1px solid #334155;
+      }
+
+      input[type="text"]:focus {
+        border-color: #22c55e;
+        box-shadow: 0 0 0 4px rgba(34, 197, 94, .08);
+      }
+
+      button.secondary {
+        background: #334155;
+        color: #e6eef6;
+      }
+
+      code,
+      var {
+        background: #07111a;
+        color: #e0e0e0;
+      }
+
+      .result-block {
+        color: #e6eef6;
+      }
+
+      .value {
+        color: #e0e0e0;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <header>
+    <h1>🗺️ MGRS → グリッド範囲（SW / NE）</h1>
+    <div class="muted">入力された MGRS の桁数から、セル解像度、100km 四角内のオフセット（m）、および境界を表示します。</div>
+  </header>
+  <main>
+    <div class="card">
+      <label for="mgrsInput">MGRS（例: <code class="mono">54S VE 17689 58</code> / <code class="mono">54SUE12</code> /
+        <code class="mono">54SUE</code>）</label>
+      <input id="mgrsInput" type="text" placeholder="54SVE17689580" spellcheck="false" />
+      <div class="controls">
+        <button id="btnCalc">計算する</button>
+        <button id="btnClear" class="secondary">クリア</button>
+        <span id="status" class="muted" aria-live="polite"></span>
+      </div>
+      <div id="error" class="error" role="alert" aria-live="assertive"></div>
+      <div id="out" class="grid" style="margin-top:16px; display:none;">
+        <div class="kv">
+          <div class="muted">正規化 MGRS</div>
+          <div id="o_norm" class="mono value"></div>
+        </div>
+        <div class="kv">
+          <div class="muted">要素</div>
+          <div class="result-block mono" id="o_parts"></div>
+        </div>
+        <div class="kv">
+          <div class="muted">セル解像度</div>
+          <div class="mono value" id="o_res"></div>
+        </div>
+        <div class="kv">
+          <div class="muted">100 km 四角内オフセット（m）</div>
+          <div class="result-block mono" id="o_offsets"></div>
+        </div>
+        <div class="kv" style="grid-column: 1 / -1;">
+          <div class="muted">SW / NE（MGRS 5桁ペア表記）</div>
+          <div class="result-block mono" id="o_mgrs_bounds"></div>
+          <div class="footer">※ NE は上端（排他的）です。100000 の場合は境界上となります。</div>
+        </div>
+        <div class="kv" style="grid-column: 1 / -1;">
+          <div class="muted">四隅（緯度, 経度 / WGS84）</div>
+          <div class="result-block mono" id="o_latlon_bounds"></div>
+          <div class="footer">※ 緯度/経度変換は mgrs ライブラリが読み込まれている場合に実行します。</div>
+        </div>
+      </div>
+      <div class="footer">
+        補足：ここでは 100 km メッシュ内の相対距離（m）と 5桁パディング表記を表示します。地図描画は行いません。
+      </div>
+    </div>
+  </main>
+  <footer style="font-size:0.9em; color:#666; text-align:center; padding:10px 0; width:100%; margin-top:24px;">
+    &copy; 2025 Iwata M. All rights reserved.
+  </footer>
+
+  <!-- ESM import fallback for mgrs (non-critical) -->
+  <script type="module">
+    (async () => {
+      try {
+        const mod = await import('https://unpkg.com/mgrs@1.0.0/mgrs.js');
+        window.mgrs = (mod && (mod.default || mod.mgrs)) || mod;
+        console.info('mgrs loaded via ESM import', !!window.mgrs);
+      } catch (e) {
+        console.debug('mgrs ESM import failed:', e && e.message ? e.message : e);
+      }
+    })();
+  </script>
+
+  <script>
+    // --- Utilities ----------------------------------------------------------
+    const $ = sel => document.querySelector(sel);
+    const pad5 = n => {
+      // Ensure numeric and handle boundary 100000 (exclusive upper bound marker)
+      const num = Number(n) || 0;
+      if (num >= 100000) return String(num); // allow 100000 as a boundary marker
+      const clamped = Math.max(0, Math.min(99999, Math.floor(num)));
+      return String(clamped).padStart(5, '0');
+    };
+
+    function normalizeInput(str) {
+      if (!str) return '';
+      // Trim, uppercase and remove any non-alphanumeric characters to normalize inputs like
+      // "54S VE 17689 58" or "54S-VE-17689/58" into a compact form.
+      return ('' + str).trim().toUpperCase().replace(/[^A-Z0-9]+/g, '');
+    }
+
+    function parseMGRS(s) {
+      const err = msg => { throw new Error(msg); };
+      if (!/^[0-9]{1,2}[C-HJ-NP-X][A-HJ-NP-Z]{2}([0-9]{0,10})$/i.test(s)) {
+        err("MGRS 形式が不正です。例: 54SUE123456 / 54S UE 12 / 54SUE\n数値部は 0,2,4,6,8,10 桁です。");
+      }
+      const m = s.match(/^([0-9]{1,2})([C-HJ-NP-X])([A-HJ-NP-Z]{2})([0-9]*)$/i);
+      if (!m) err("解析に失敗しました。");
+      const zone = parseInt(m[1], 10);
+      if (!(zone >= 1 && zone <= 60)) err("ゾーン番号が不正です (1..60)。");
+      const band = m[2];
+      const grid = m[3];
+      const nums = m[4] || '';
+      const col = grid[0], row = grid[1];
+      if (/[IO]/.test(band + col + row)) err("MGRS では I, O は使用できません。");
+      if (nums.length % 2 !== 0 || nums.length > 10) {
+        err("数値部は 0,2,4,6,8,10 桁（各半分が同じ桁数）である必要があります。");
+      }
+      const half = Math.floor(nums.length / 2);
+      const eStr = nums.slice(0, half);
+      const nStr = nums.slice(half);
+      return { zone, band, col, row, eStr, nStr };
+    }
+
+    function resolutionForDigits(nEach) {
+      if (nEach === 0) return 100000;
+      if (nEach === 1) return 10000;
+      if (nEach === 2) return 1000;
+      if (nEach === 3) return 100;
+      if (nEach === 4) return 10;
+      if (nEach === 5) return 1;
+      throw new Error("不正な桁数です");
+    }
+
+    function toFiveDigitPair(e_off_m, n_off_m) {
+      // Use floor to coerce floats, allow 100000 as an exclusive upper-bound marker
+      const clampVal = v => Math.max(0, Math.min(100000, Math.floor(Number(v) || 0)));
+      return { e: pad5(clampVal(e_off_m)), n: pad5(clampVal(n_off_m)) };
+    }
+
+    function computeCellBounds(parsed) {
+      const { zone, band, col, row, eStr, nStr } = parsed;
+      const nEach = eStr.length;
+      const res = resolutionForDigits(nEach);
+      const eDigits = eStr ? parseInt(eStr, 10) : 0;
+      const nDigits = nStr ? parseInt(nStr, 10) : 0;
+      const e_off = eDigits * res;
+      const n_off = nDigits * res;
+      const e_off_NE = e_off + res;
+      const n_off_NE = n_off + res;
+      const SW = toFiveDigitPair(e_off, n_off);
+      const NE = toFiveDigitPair(e_off_NE, n_off_NE);
+      return {
+        zone, band, col, row,
+        resolution_m: res,
+        digits_each: nEach,
+        easting_m: { min: e_off, max_exclusive: e_off_NE },
+        northing_m: { min: n_off, max_exclusive: n_off_NE },
+        sw_mgrs_pair: `${SW.e} ${SW.n}`,
+        ne_upper_pair: `${NE.e} ${NE.n}`
+      };
+    }
+
+    function renderResult(result) {
+      const { zone, band, col, row, resolution_m, digits_each, easting_m, northing_m, sw_mgrs_pair, ne_upper_pair } = result;
+
+      $('#o_norm').textContent = `${String(zone).padStart(2, '0')}${band}${col}${row}${(digits_each > 0) ? (String(easting_m.min / resolution_m).padStart(digits_each, '0') + String(northing_m.min / resolution_m).padStart(digits_each, '0')) : ''}`;
+
+      $('#o_parts').textContent =
+        `ゾーン:        ${zone}
+緯度帯(Band):  ${band}
+100km四角ID:   ${col}${row}
+数値桁 (各軸):  ${digits_each}`;
+
+      const humanRes = (m) => { if (m >= 1000) return (m / 1000).toLocaleString() + ' km'; return m.toLocaleString() + ' m'; };
+      $('#o_res').textContent = `${humanRes(resolution_m)} / side`;
+
+      $('#o_offsets').textContent =
+        `Easting : [${easting_m.min.toLocaleString()} , ${easting_m.max_exclusive.toLocaleString()}) m
+Northing: [${northing_m.min.toLocaleString()} , ${northing_m.max_exclusive.toLocaleString()}) m`;
+
+      $('#o_mgrs_bounds').textContent =
+        `${String(zone).padStart(2, '0')}${band} ${col}${row}  SW  ${sw_mgrs_pair}
+${String(zone).padStart(2, '0')}${band} ${col}${row}  NE  ${ne_upper_pair}  (上端・排他境界)`;
+
+      try {
+        if (typeof window.mgrs !== 'undefined' && window.mgrs && typeof window.mgrs.toPoint === 'function') {
+          const zStr = String(zone).padStart(2, '0');
+          const eMin = easting_m.min | 0;
+          const eMaxEx = easting_m.max_exclusive | 0;
+          const nMin = northing_m.min | 0;
+          const nMaxEx = northing_m.max_exclusive | 0;
+          const swE = pad5(eMin);
+          const swN = pad5(nMin);
+          const seE = pad5(Math.max(0, eMaxEx - 1));
+          const seN = pad5(nMin);
+          const nwE = pad5(eMin);
+          const nwN = pad5(Math.max(0, nMaxEx - 1));
+          const neE = pad5(Math.max(0, eMaxEx - 1));
+          const neN = pad5(Math.max(0, nMaxEx - 1));
+          const fullSw = `${zStr}${band}${col}${row}${swE}${swN}`;
+          const fullSe = `${zStr}${band}${col}${row}${seE}${seN}`;
+          const fullNw = `${zStr}${band}${col}${row}${nwE}${nwN}`;
+          const fullNe = `${zStr}${band}${col}${row}${neE}${neN}`;
+          const sw_ll = window.mgrs.toPoint(fullSw);
+          const se_ll = window.mgrs.toPoint(fullSe);
+          const nw_ll = window.mgrs.toPoint(fullNw);
+          const ne_ll = window.mgrs.toPoint(fullNe);
+          const fmt = v => Number(v).toFixed(6);
+          $('#o_latlon_bounds').textContent =
+            `${fmt(nw_ll[1])} , ${fmt(nw_ll[0])}
+${fmt(ne_ll[1])} , ${fmt(ne_ll[0])}
+${fmt(se_ll[1])} , ${fmt(se_ll[0])}
+${fmt(sw_ll[1])} , ${fmt(sw_ll[0])}`;
+        } else {
+          $('#o_latlon_bounds').textContent = '緯度/経度変換ライブラリが利用できません。';
+        }
+      } catch (err) {
+        $('#o_latlon_bounds').textContent = '緯度/経度変換中にエラーが発生しました: ' + (err && err.message ? err.message : err);
+      }
+
+      $('#out').style.display = 'grid';
+    }
+
+    function waitForMgrs(timeoutMs = 2000, intervalMs = 50) {
+      return new Promise(resolve => {
+        if (typeof window.mgrs !== 'undefined' && window.mgrs && typeof window.mgrs.toPoint === 'function') return resolve(true);
+        const start = Date.now();
+        const id = setInterval(() => {
+          if (typeof window.mgrs !== 'undefined' && window.mgrs && typeof window.mgrs.toPoint === 'function') {
+            clearInterval(id); resolve(true);
+          } else if (Date.now() - start > timeoutMs) {
+            clearInterval(id); resolve(false);
+          }
+        }, intervalMs);
+      });
+    }
+
+    async function onCalculate() {
+      $('#error').textContent = '';
+      $('#status').textContent = '計算中…';
+      try {
+        const raw = $('#mgrsInput') ? $('#mgrsInput').value : '';
+        const norm = normalizeInput(raw);
+        $('#mgrsInput').value = norm;
+        const parsed = parseMGRS(norm);
+        const result = computeCellBounds(parsed);
+        await waitForMgrs(2000, 50);
+        renderResult(result);
+        $('#status').textContent = '完了';
+      } catch (e) {
+        $('#out').style.display = 'none';
+        $('#status').textContent = '';
+        $('#error').textContent = e.message || 'エラーが発生しました';
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      $('#btnCalc').addEventListener('click', onCalculate);
+      $('#btnClear').addEventListener('click', () => {
+        $('#mgrsInput').value = ''; $('#out').style.display = 'none'; $('#error').textContent = ''; $('#status').textContent = '';
+        $('#mgrsInput').focus();
+      });
+      $('#mgrsInput').addEventListener('keydown', e => { if (e.key === 'Enter') { onCalculate(); } });
+      const demo = new URLSearchParams(location.search).get('q') || '54SVE17689580';
+      $('#mgrsInput').value = demo;
+    });
+  </script>
+</body>
+
+</html>

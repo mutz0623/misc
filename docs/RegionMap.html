@@ -1,0 +1,896 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>地図範囲可視化ツール（多角形・円 / 座標フォーマット対応）</title>
+  <!-- Leaflet -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <style>
+    :root {
+      --bg: #f4f4f9;
+      --panel: #fff;
+      --muted: #666;
+      --text: #333;
+      --accent: #007BFF;
+      --danger: #ef4444;
+      --ok: #10b981
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #121212;
+        --panel: #1e1e1e;
+        --muted: #999;
+        --text: #e0e0e0;
+        --accent: #80bfff;
+      }
+    }
+
+    * {
+      box-sizing: border-box
+    }
+
+    html,
+    body {
+      height: 100%;
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Roboto', sans-serif
+    }
+
+    .app {
+      display: grid;
+      grid-template-columns: 380px 1fr;
+      grid-template-rows: 100vh;
+      gap: 0
+    }
+
+    .sidebar {
+      background: var(--panel);
+      border-right: 1px solid rgba(0, 0, 0, 0.1);
+      padding: 20px;
+      overflow: auto;
+      box-shadow: 2px 0 6px rgba(0, 0, 0, 0.1)
+    }
+
+    @media (prefers-color-scheme: dark) {
+      .sidebar {
+        border-right-color: rgba(255, 255, 255, 0.1);
+        box-shadow: 2px 0 6px rgba(0, 0, 0, 0.5)
+      }
+    }
+
+    h1 {
+      font-size: 20px;
+      margin: 0 0 15px;
+      letter-spacing: .2px;
+      font-weight: 700;
+      color: var(--text)
+    }
+
+    .sub {
+      color: var(--muted);
+      font-size: 12px;
+      margin-bottom: 12px
+    }
+
+    label {
+      display: block;
+      font-size: 12px;
+      color: var(--muted);
+      margin: 10px 0 6px
+    }
+
+    input[type="text"],
+    input[type="number"],
+    select,
+    textarea {
+      width: 100%;
+      padding: 10px 12px;
+      background: var(--panel);
+      color: var(--text);
+      border: 1px solid rgba(0, 0, 0, 0.2);
+      border-radius: 8px;
+      outline: none;
+      transition: border-color 0.3s ease;
+      font-family: 'Roboto', sans-serif
+    }
+
+    input[type="text"]:focus,
+    input[type="number"]:focus,
+    select:focus,
+    textarea:focus {
+      border-color: var(--accent)
+    }
+
+    textarea {
+      min-height: 110px;
+      resize: vertical;
+      line-height: 1.4
+    }
+
+    @media (prefers-color-scheme: dark) {
+
+      input[type="text"],
+      input[type="number"],
+      select,
+      textarea {
+        border-color: rgba(255, 255, 255, 0.2);
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2)
+      }
+    }
+
+    .row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      border: 1px solid var(--accent);
+      background: transparent;
+      color: var(--accent);
+      padding: 10px 15px;
+      border-radius: 8px;
+      cursor: pointer;
+      user-select: none;
+      transition: all 0.3s ease;
+      font-weight: 700
+    }
+
+    .btn.icon {
+      padding: 8px;
+      font-size: 14px
+    }
+
+    .btn:hover {
+      background: var(--accent);
+      color: var(--panel)
+    }
+
+    .btn.primary {
+      background: var(--accent);
+      color: var(--panel);
+      font-weight: 700
+    }
+
+    .btn.primary:hover {
+      opacity: 0.9
+    }
+
+    .btn.ghost {
+      background: transparent;
+      border-color: rgba(0, 0, 0, 0.2)
+    }
+
+    .btn.danger {
+      border-color: var(--danger);
+      color: var(--danger)
+    }
+
+    .btn.danger:hover {
+      background: var(--danger);
+      color: var(--panel)
+    }
+
+    @media (prefers-color-scheme: dark) {
+      .btn.ghost {
+        border-color: rgba(255, 255, 255, 0.2)
+      }
+    }
+
+    .toolbar {
+      display: flex;
+      gap: 8px;
+      margin-top: 12px
+    }
+
+    .card {
+      border: 1px solid rgba(0, 0, 0, 0.1);
+      border-radius: 10px;
+      padding: 20px;
+      background: var(--panel);
+      margin: 15px 0;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1)
+    }
+
+    @media (prefers-color-scheme: dark) {
+      .card {
+        border-color: rgba(255, 255, 255, 0.1);
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.5)
+      }
+    }
+
+    .list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px
+    }
+
+    .item {
+      padding: 15px;
+      border: 1px solid rgba(0, 0, 0, 0.1);
+      border-radius: 10px;
+      background: var(--panel);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05)
+    }
+
+    @media (prefers-color-scheme: dark) {
+      .item {
+        border-color: rgba(255, 255, 255, 0.1);
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3)
+      }
+    }
+
+    .swatch {
+      width: 14px;
+      height: 14px;
+      border-radius: 4px;
+      border: 1px solid #0006
+    }
+
+    .item-header {
+      display: flex;
+      align-items: center;
+      gap: 8px
+    }
+
+    .item-actions {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      padding: 2px 0
+    }
+
+    .grow {
+      flex: 1
+    }
+
+    .muted {
+      color: var(--muted);
+      font-size: 12px
+    }
+
+    .success {
+      color: var(--ok);
+      font-size: 12px
+    }
+
+    .err {
+      color: #fecaca;
+      background: #3b0f13;
+      border: 1px solid #7f1d1d;
+      padding: 8px 10px;
+      border-radius: 10px;
+      font-size: 12px;
+      margin-top: 10px;
+      white-space: pre-wrap
+    }
+
+    #map {
+      height: 100%;
+      width: 100%
+    }
+
+    .hint {
+      font-size: 11px;
+      color: #9ca3af;
+      margin-top: 6px;
+      line-height: 1.4
+    }
+
+    .small {
+      font-size: 11px
+    }
+
+    .kbd {
+      display: inline-block;
+      padding: 0 6px;
+      border: 1px solid rgba(0, 0, 0, 0.2);
+      border-bottom-width: 2px;
+      border-radius: 6px;
+      background: var(--panel);
+      color: var(--text);
+      font-size: 11px;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1)
+    }
+
+    @media (prefers-color-scheme: dark) {
+      .kbd {
+        border-color: rgba(255, 255, 255, 0.2);
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3)
+      }
+    }
+
+    .section-title {
+      font-weight: 600;
+      font-size: 13px;
+      letter-spacing: .2px;
+      margin-top: 8px
+    }
+
+    .leaflet-tooltip.label {
+      background: rgba(0, 0, 0, .55);
+      color: #e5e7eb;
+      border: 1px solid #1f2937;
+      border-radius: 8px;
+      padding: 2px 6px;
+      font-size: 11px;
+      box-shadow: none;
+      margin-top: -25px;
+      white-space: nowrap;
+    }
+
+    .coords-panel {
+      margin-top: 8px;
+      padding: 12px;
+      border-radius: 8px;
+      background: var(--bg);
+      border: 1px solid rgba(0, 0, 0, 0.1);
+      font-size: 12px;
+      color: var(--text);
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05)
+    }
+
+    @media (prefers-color-scheme: dark) {
+      .coords-panel {
+        border-color: rgba(255, 255, 255, 0.1);
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3)
+      }
+    }
+
+    .coords-lines {
+      max-height: 160px;
+      overflow: auto;
+      margin-bottom: 12px;
+      padding: 8px;
+      white-space: pre-wrap;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, 'Roboto Mono', 'Courier New', monospace;
+      font-size: 11px;
+      line-height: 1.6;
+      word-break: break-all;
+      word-wrap: break-word;
+      background: var(--panel);
+      border: 1px solid rgba(0, 0, 0, 0.1);
+      border-radius: 6px
+    }
+
+    @media (prefers-color-scheme: dark) {
+      .coords-lines {
+        border-color: rgba(255, 255, 255, 0.1)
+      }
+    }
+
+    .coords-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      justify-content: flex-end
+    }
+
+    .coords-actions .btn {
+      font-size: 12px;
+      padding: 6px 12px
+    }
+  </style>
+</head>
+
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <h1>地図範囲可視化</h1>
+      <div class="sub">多角形/円を複数追加・表示。座標は <b>度-分-秒</b>・<b>小数</b>・<b>全角</b>・<b>日本語表記</b>にも対応。</div>
+
+      <div class="card" id="form-card">
+        <div class="row">
+          <div>
+            <label>種類</label>
+            <select id="geom-type" aria-label="地図範囲の種類を選択">
+              <option value="polygon">多角形</option>
+              <option value="circle">円（中心＋半径）</option>
+            </select>
+          </div>
+          <div>
+            <label>名称（任意）</label>
+            <input id="geom-name" type="text" placeholder="例：エリアA" aria-label="地図範囲の名称" />
+          </div>
+        </div>
+
+        <div id="polygon-fields">
+          <label>頂点座標（1行=1点）</label>
+          <textarea id="polygon-input" placeholder="例：
+30-25-40N 130-58-21E
+30-26-24N 130-59-22E
+30-26-24N 131-16-48E
+30-16-12N 131-16-48E
+30-16-12N 130-57-49E
+30-21-57N 130-57-49E
+30-22-20N 130-57-41E" aria-label="多角形の頂点座標"></textarea>
+          <div class="hint">
+            <div class="small">・<span class="kbd">25-09N 132-13E</span>（全角/半角どちらでも）</div>
+            <div class="small">・<span class="kbd">N34-59.1-E139-05.8</span>（分の小数点）</div>
+            <div class="small">・<span class="kbd">25°09' N 132°13' E</span> / <span class="kbd">25 09 N 132 13 E</span>
+            </div>
+            <div class="small">・<span class="kbd">25.15, 132.2167</span>（小数, 緯度,経度）</div>
+            <div class="small">・<span class="kbd">北緯34度35分12秒 東経140度16分48秒</span>（日本語）</div>
+          </div>
+        </div>
+
+        <div id="circle-fields" style="display:none">
+          <label>中心座標</label>
+          <input id="circle-center" type="text"
+            placeholder="例：２５－０９Ｎ １３２－１３Ｅ / 北緯34度35分12秒 東経140度16分48秒 / 25.15,132.2167" aria-label="円の中心座標" />
+          <div class="row">
+            <div>
+              <label>半径</label>
+              <input id="circle-radius" type="number" min="0" step="0.001" placeholder="数値" aria-label="円の半径" />
+            </div>
+            <div>
+              <label>単位</label>
+              <select id="circle-unit" aria-label="円の半径の単位">
+                <option value="m">m</option>
+                <option value="km" selected>km</option>
+                <option value="nm">NM（海里）</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div class="toolbar">
+          <button id="add-geom" class="btn primary" aria-label="地図範囲を追加">領域を追加</button>
+          <button id="fit-all" class="btn ghost" title="すべての領域を収める" aria-label="すべての領域を地図に表示">全体表示</button>
+        </div>
+        <div id="error" class="err" style="display:none"></div>
+        <div id="ok" class="success" style="display:none">追加しました。</div>
+      </div>
+
+      <div class="card">
+        <div class="section-title">領域一覧</div>
+        <div id="list" class="list"></div>
+        <div class="hint small">ヒント：
+          <span class="kbd">👁️/👁️‍🗨️</span>で表示/非表示、<span class="kbd">✏️</span>で名称編集、<span class="kbd">🗑</span>で削除。
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="section-title">座標入力のコツ</div>
+        <div class="hint small">
+          ・全角の数字/記号/方位（ＮＥＳＷ）でもOKです。<br />
+          ・<b>度-分-秒</b> まで書いてもOK（例：<span class="kbd">35-39-29N</span>）。<br />
+          ・<b>日本語表記</b>にも対応（例：<span class="kbd">北緯34度35分12秒 東経140度16分48秒</span>）。<br />
+          ・<b>分の小数点</b>にも対応（例：<span class="kbd">北緯34度59.1分 東経139度05.8分</span>）。<br />
+          ・方位がない場合は <b>緯度,経度</b> の順として解釈します（南/西はマイナス）。
+        </div>
+      </div>
+      <!-- 著作権表示 -->
+      <div style="text-align:center; color:#94a3b8; font-size:11px; margin-top:16px;">
+        &copy; 2025 Iwata M. All rights reserved.
+      </div>
+    </aside>
+    <main id="map"></main>
+  </div>
+
+  <script>
+    // =============================
+    //  ユーティリティ（全角→半角 / パース）
+    // =============================
+    const ZEN2HAN_MAP = {
+      '０': '0', '１': '1', '２': '2', '３': '3', '４': '4', '５': '5', '６': '6', '７': '7', '８': '8', '９': '9',
+      '－': '-', 'ー': '-', '—': '-', '―': '-', '-': '-', '–': '-', '−': '-',
+      '　': ' ', '，': ',', '．': '.', '：': ':', '；': ';', '／': '/', '（': '(', '）': ')', '＋': '+', '＊': '*', '’': '\'', '″': '\"',
+      'Ｎ': 'N', 'Ｓ': 'S', 'Ｅ': 'E', 'Ｗ': 'W', 'ｎ': 'N', 'ｓ': 'S', 'ｅ': 'E', 'ｗ': 'W',
+      '°': '°', '′': '\'', '“': '\"', '”': '\"'
+    };
+    function toHalfWidth(str) { return (str || '').split('').map(ch => ZEN2HAN_MAP[ch] ?? ch).join(''); }
+    function normalizeCoordString(s) {
+      s = toHalfWidth(s).trim();
+      // 日本語 → 英字＋DMS記号
+      // 日本語表記を英字に変換（前後のスペースを考慮）
+      s = s.replace(/北緯\s*/gi, 'N')
+        .replace(/南緯\s*/gi, 'S')
+        .replace(/東経\s*/gi, 'E')
+        .replace(/西経\s*/gi, 'W')
+        .replace(/(\s*)北(\s*)/gi, '$1N$2')
+        .replace(/(\s*)南(\s*)/gi, '$1S$2')
+        .replace(/(\s*)東(\s*)/gi, '$1E$2')
+        .replace(/(\s*)西(\s*)/gi, '$1W$2')
+        .replace(/度/gi, '-')
+        .replace(/分/gi, '-')
+        .replace(/秒/gi, '')  // 秒は末尾なので削除
+        .replace(/、/g, ',');
+      // DMS 記号をハイフン化
+      s = s.replace(/[°]/g, '-').replace(/[′']/g, '-').replace(/[″"]/g, '-');
+      s = s.replace(/[,\s]+/g, ' ').replace(/[–—―]/g, '-');
+      s = s.replace(/\s*-\s*/g, '-').replace(/-+/g, '-').replace(/\s+/g, ' ').trim();
+      return s;
+    }
+
+    // 1要素を10進度に
+    function parseDMS(token, isLat = null) {
+      if (!token) throw new Error('空の座標トークン');
+      token = normalizeCoordString(token);
+      // 方位（末尾または先頭）
+      const hemiMatch = token.match(/([NSEW])$/i) || token.match(/^([NSEW])/i);
+      let hemi = hemiMatch ? hemiMatch[1].toUpperCase() : null;
+      token = token.replace(/^[NSEW]|[NSEW]$/ig, '').trim();
+
+      const parts = token.split(/[-\s]+/).filter(Boolean);
+      let deg = 0, min = 0, sec = 0;
+      if (parts.length === 1) { deg = parseFloat(parts[0]); }
+      else if (parts.length === 2) {
+        deg = parseFloat(parts[0]);
+        // 分の小数点対応
+        const minParts = parts[1].split('.');
+        min = parseFloat(parts[1]);
+        if (minParts.length > 1) {
+          sec = parseFloat('0.' + minParts[1]) * 60;
+        }
+      }
+      else { deg = parseFloat(parts[0]); min = parseFloat(parts[1]); sec = parseFloat(parts[2] || 0); }
+      if ([deg, min, sec].some(v => Number.isNaN(v))) throw new Error('数値として解釈できません: ' + token);
+      let val = Math.abs(deg) + (Math.abs(min) || 0) / 60 + (Math.abs(sec) || 0) / 3600;
+      if (hemi) { if (hemi === 'S' || hemi === 'W') val *= -1; }
+      else { if (/^\s*-/.test(token)) val *= -1; }
+      if (isLat === true && (val > 90 || val < -90)) throw new Error('緯度の範囲外');
+      if (isLat === false && (val > 180 || val < -180)) throw new Error('経度の範囲外');
+      return val;
+    }
+
+    // 1行を (lat, lon)
+    function parseLatLon(line) {
+      line = normalizeCoordString(line);
+      if (!line) throw new Error('空行');
+      // N34-59.1-E139-05.8- のような形式をチェック
+      const nsewPattern = /^([NS])(\d+[-\d.]+)[-\s]*([EW])(\d+[-\d.]+)-?$/i;
+      const nsewMatch = line.match(nsewPattern);
+      if (nsewMatch) {
+        const [_, nsHemi, latPart, ewHemi, lonPart] = nsewMatch;
+        return [
+          parseDMS(nsHemi + latPart, true),
+          parseDMS(ewHemi + lonPart, false)
+        ];
+      }
+
+      // カンマ区切り優先
+      let tokens = line.split(',');
+      if (tokens.length === 2) { return [parseDMS(tokens[0], true), parseDMS(tokens[1], false)]; }
+      // スペース分割
+      tokens = line.split(/\s+/).filter(Boolean);
+      if (tokens.length === 2) { return [parseDMS(tokens[0], true), parseDMS(tokens[1], false)]; }
+      if (tokens.length === 3) { return [parseDMS(tokens[0], true), parseDMS(tokens.slice(1).join(' '), false)]; }
+      if (tokens.length >= 4) {
+        const idxNS = tokens.findIndex(t => /^([NS])$/i.test(toHalfWidth(t)));
+        const idxEW = tokens.findIndex(t => /^([EW])$/i.test(toHalfWidth(t)));
+        if (idxNS !== -1 && idxEW !== -1) {
+          const latTokens = tokens.slice(0, idxNS + 1).join(' ');
+          const lonTokens = tokens.slice(idxNS + 1).join(' ');
+          return [parseDMS(latTokens, true), parseDMS(lonTokens, false)];
+        } else {
+          const half = Math.floor(tokens.length / 2);
+          return [parseDMS(tokens.slice(0, half).join(' '), true), parseDMS(tokens.slice(half).join(' '), false)];
+        }
+      }
+      throw new Error('座標行の形式を解釈できません: ' + line);
+    }
+
+    // =============================
+    //  Leaflet 初期化
+    // =============================
+    const map = L.map('map', { zoomControl: true }).setView([35.68, 139.76], 5);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(map);
+
+    // =============================
+    //  状態
+    // =============================
+    let NEXT_ID = 1;
+    const palette = ['#22d3ee', '#a78bfa', '#f472b6', '#34d399', '#f59e0b', '#60a5fa', '#f43f5e', '#10b981', '#eab308', '#fb7185'];
+    function pickColor(idx) { return palette[idx % palette.length]; }
+    const regions = new Map();
+
+    // =============================
+    //  UI 要素
+    // =============================
+    const elType = document.getElementById('geom-type');
+    const elName = document.getElementById('geom-name');
+    const elPolyArea = document.getElementById('polygon-fields');
+    const elPoly = document.getElementById('polygon-input');
+    const elCircleArea = document.getElementById('circle-fields');
+    const elCenter = document.getElementById('circle-center');
+    const elRadius = document.getElementById('circle-radius');
+    const elUnit = document.getElementById('circle-unit');
+    const elList = document.getElementById('list');
+    const elErr = document.getElementById('error');
+    const elOK = document.getElementById('ok');
+
+    elType.addEventListener('change', () => {
+      const isPoly = elType.value === 'polygon';
+      elPolyArea.style.display = isPoly ? '' : 'none';
+      elCircleArea.style.display = isPoly ? 'none' : '';
+    });
+
+    function showError(msg) { elErr.style.display = 'block'; elErr.textContent = msg; elOK.style.display = 'none'; }
+    function showOK(msg = '追加しました。') { elErr.style.display = 'none'; elOK.style.display = 'block'; elOK.textContent = msg; setTimeout(() => { elOK.style.display = 'none'; }, 1800); }
+
+    function metersFromUnit(value, unit) {
+      const v = Number(value); if (!(v >= 0)) throw new Error('半径が不正です');
+      if (unit === 'km') return v * 1000; if (unit === 'nm') return v * 1852; return v;
+    }
+
+    function fitAll() {
+      const layers = Array.from(regions.values()).map(r => r.layer).filter(l => l && map.hasLayer(l));
+      if (!layers.length) { map.setView([35.68, 139.76], 5); return; }
+      const group = L.featureGroup(layers);
+      map.fitBounds(group.getBounds().pad(0.15));
+    }
+
+    function renderList() {
+      elList.innerHTML = '';
+      if (regions.size === 0) {
+        const empty = document.createElement('div');
+        empty.className = 'muted';
+        empty.textContent = '（領域はまだありません）';
+        elList.appendChild(empty);
+        return;
+      }
+      Array.from(regions.values()).sort((a, b) => a.id - b.id).forEach(r => {
+        const item = document.createElement('div');
+        item.className = 'item';
+
+        // ヘッダー部分（領域名とカラー）
+        const header = document.createElement('div');
+        header.className = 'item-header';
+
+        const sw = document.createElement('div');
+        sw.className = 'swatch';
+        sw.style.background = r.color;
+        header.appendChild(sw);
+
+        const name = document.createElement('div');
+        name.className = 'grow';
+        const displayName = r.name && r.name.length ? r.name : (r.type === 'polygon' ? `多角形` : `円`);
+        name.innerHTML = `<div><span class="area-name">${displayName}</span> <span class="muted">#${r.id}</span></div>`;
+        header.appendChild(name);
+
+        item.appendChild(header);
+
+        // アクション部分（ボタン群）
+        const buttonRow = document.createElement('div');
+        buttonRow.className = 'item-actions';
+
+        const edit = document.createElement('button');
+        edit.className = 'btn icon'; edit.title = '名称を変更'; edit.textContent = '✏️';
+        edit.addEventListener('click', () => {
+          const current = r.name || '';
+          const next = window.prompt('領域名を入力（空でデフォルト名）', current);
+          if (next === null) return;
+          r.name = (next || '').trim();
+          const label = r.name && r.name.length ? r.name : (r.type === 'polygon' ? `多角形` : `円`);
+          r.layer.unbindTooltip();
+          r.layer.bindTooltip(`${label} #${r.id}`, { permanent: true, direction: 'center', className: 'label' });
+          renderList();
+        });
+        buttonRow.appendChild(edit);
+
+        const coordsBtn = document.createElement('button');
+        coordsBtn.className = 'btn icon'; coordsBtn.title = '座標を表示'; coordsBtn.textContent = '📍';
+        buttonRow.appendChild(coordsBtn);
+
+        const toggle = document.createElement('button');
+        toggle.className = 'btn icon';
+        toggle.title = map.hasLayer(r.layer) ? '非表示にする' : '表示する';
+        toggle.innerHTML = map.hasLayer(r.layer) ? '👁️' : '👁️‍🗨️';
+        toggle.addEventListener('click', () => {
+          if (map.hasLayer(r.layer)) {
+            map.removeLayer(r.layer);
+            toggle.innerHTML = '👁️‍🗨️';
+            toggle.title = '表示する';
+          } else {
+            r.layer.addTo(map);
+            toggle.innerHTML = '👁️';
+            toggle.title = '非表示にする';
+          }
+        });
+        buttonRow.appendChild(toggle);
+
+        const zoom = document.createElement('button');
+        zoom.className = 'btn icon'; zoom.textContent = '🔍'; zoom.title = 'この領域にズーム';
+        zoom.addEventListener('click', () => {
+          if (r.type === 'polygon') map.fitBounds(r.layer.getBounds().pad(0.2));
+          else map.fitBounds(r.layer.getBounds().pad(0.6));
+        });
+        buttonRow.appendChild(zoom);
+
+        const del = document.createElement('button');
+        del.className = 'btn danger icon'; del.textContent = '🗑'; del.title = '削除';
+        del.addEventListener('click', () => {
+          // clear any markers belonging to this region
+          clearRegionMarkers(r);
+          if (map.hasLayer(r.layer)) map.removeLayer(r.layer);
+          regions.delete(r.id);
+          renderList();
+        });
+        buttonRow.appendChild(del);
+        item.appendChild(buttonRow);
+
+        // details panel for coordinates + actions
+        const panel = document.createElement('div');
+        panel.className = 'coords-panel';
+        panel.style.display = 'none';
+        const lines = document.createElement('div'); lines.className = 'coords-lines';
+        panel.appendChild(lines);
+        // polygon のみマーカー表示/解除ボタンを追加
+        let actions;
+        if (r.type === 'polygon') {
+          actions = document.createElement('div'); actions.className = 'coords-actions';
+          const showMarkersBtn = document.createElement('button'); showMarkersBtn.className = 'btn'; showMarkersBtn.textContent = 'マーカー表示';
+          const clearMarkersBtn = document.createElement('button'); clearMarkersBtn.className = 'btn ghost'; clearMarkersBtn.textContent = 'マーカー解除';
+          actions.appendChild(showMarkersBtn); actions.appendChild(clearMarkersBtn);
+          panel.appendChild(actions);
+          showMarkersBtn.addEventListener('click', () => { showRegionMarkers(r); });
+          clearMarkersBtn.addEventListener('click', () => { clearRegionMarkers(r); });
+        }
+        item.appendChild(panel);
+
+        coordsBtn.addEventListener('click', () => {
+          // toggle panel
+          panel.style.display = panel.style.display === 'none' ? '' : 'none';
+          if (panel.style.display !== 'none') {
+            // populate
+            if (r.type === 'polygon') {
+              const latlngs = r.layer.getLatLngs();
+              // Leaflet polygon can be nested arrays; flatten first ring
+              const pts = (Array.isArray(latlngs[0]) ? latlngs[0] : latlngs).map(p => [p.lat, p.lng]);
+              lines.textContent = pts.map((p, i) => `${i + 1}. ${formatLatLon(p[0], p[1])}`).join('\n');
+            } else if (r.type === 'circle') {
+              const c = r.layer.getLatLng();
+              const rad = r.layer.getRadius();
+              lines.textContent = `中心: ${formatLatLon(c.lat, c.lng)}\n半径(m): ${Math.round(rad)}`;
+            }
+          }
+        });
+
+        elList.appendChild(item);
+      });
+    }
+
+    function addPolygon() {
+      const raw = elPoly.value.split(/\n+/).map(s => s.trim()).filter(Boolean);
+      if (raw.length < 3) throw new Error('多角形は3点以上が必要です');
+      const latlngs = raw.map((ln, i) => {
+        try {
+          const [lat, lon] = parseLatLon(ln);
+          return [lat, lon];
+        } catch (e) { throw new Error(`行${i + 1}: ${e.message}`); }
+      });
+      const id = NEXT_ID++;
+      const color = pickColor(id);
+      const name = elName.value.trim();
+      const layer = L.polygon(latlngs, { color, weight: 2, opacity: 0.9, fillOpacity: 0.15 });
+      layer.addTo(map);
+      const label = name && name.length ? name : '多角形';
+      layer.bindTooltip(`${label} #${id}`, { permanent: true, direction: 'top', offset: [0, -10], className: 'label' });
+      regions.set(id, { id, type: 'polygon', name, color, layer, markers: [] });
+      renderList();
+      fitAll();
+    }
+
+    function addCircle() {
+      const centerText = elCenter.value.trim();
+      if (!centerText) throw new Error('中心座標を入力してください');
+      const [lat, lon] = parseLatLon(centerText);
+      const radiusMeters = metersFromUnit(elRadius.value, elUnit.value);
+      if (!(radiusMeters > 0)) throw new Error('半径は正の値で入力してください');
+      const id = NEXT_ID++;
+      const color = pickColor(id);
+      const name = elName.value.trim();
+      const layer = L.circle([lat, lon], { radius: radiusMeters, color, weight: 2, opacity: 0.9, fillOpacity: 0.12 });
+      layer.addTo(map);
+      const label = name && name.length ? name : '円';
+      layer.bindTooltip(`${label} #${id}`, { permanent: true, direction: 'top', offset: [0, -10], className: 'label' });
+      regions.set(id, { id, type: 'circle', name, color, layer, markers: [] });
+      renderList();
+      fitAll();
+    }
+
+    // 座標の表示フォーマット（小数6桁）
+    function formatLatLon(lat, lon) {
+      return `${lat.toFixed(6)}, ${lon.toFixed(6)}`;
+    }
+
+    // 指定領域のマーカーを表示（多角形は頂点、円は中心）
+    function showRegionMarkers(region) {
+      clearRegionMarkers(region);
+      if (!region || !region.layer) return;
+      const color = region.color || '#22d3ee';
+      if (region.type === 'polygon') {
+        const latlngs = region.layer.getLatLngs();
+        const pts = (Array.isArray(latlngs[0]) ? latlngs[0] : latlngs).map(p => ({ lat: p.lat, lng: p.lng }));
+        region.markers = pts.map((p, i) => {
+          const m = L.marker([p.lat, p.lng], { icon: L.divIcon({ className: 'vertex-marker', html: `<div style="background:${color};color:#001018;border-radius:10px;padding:2px 6px;font-size:11px">${i + 1}</div>` }) });
+          m.addTo(map);
+          return m;
+        });
+      } else if (region.type === 'circle') {
+        const c = region.layer.getLatLng();
+        const m = L.marker([c.lat, c.lng], { icon: L.divIcon({ className: 'center-marker', html: `<div style="background:${color};width:10px;height:10px;border-radius:50%"></div>` }) });
+        m.addTo(map);
+        region.markers = [m];
+      }
+      // zoom to markers if any
+      if (region.markers && region.markers.length) {
+        const group = L.featureGroup(region.markers);
+        map.fitBounds(group.getBounds().pad(0.4));
+      }
+    }
+
+    function clearRegionMarkers(region) {
+      if (!region || !region.markers) return;
+      region.markers.forEach(m => { try { if (map.hasLayer(m)) map.removeLayer(m); } catch (e) { } });
+      region.markers = [];
+    }
+
+    document.getElementById('fit-all').addEventListener('click', fitAll);
+
+    // =============================
+    //  ユーザー入力のバリデーション
+    // =============================
+    const VALIDATION_RULES = {
+      'polygon': [
+        { id: 'polygon-input', type: 'text', required: true, msg: '頂点座標を入力してください' },
+        { id: 'geom-name', type: 'text', required: false, msg: '名称は任意ですが、わかりやすい名前を推奨します' }
+      ],
+      'circle': [
+        { id: 'circle-center', type: 'text', required: true, msg: '中心座標を入力してください' },
+        { id: 'circle-radius', type: 'number', required: true, msg: '半径を入力してください' },
+        { id: 'geom-name', type: 'text', required: false, msg: '名称は任意ですが、わかりやすい名前を推奨します' }
+      ]
+    };
+
+    function validateInput(type) {
+      const rules = VALIDATION_RULES[type];
+      if (!rules) return true;
+      let isValid = true;
+      rules.forEach(rule => {
+        const el = document.getElementById(rule.id);
+        const value = el.value.trim();
+        let valid = true;
+        if (rule.required && !value) {
+          valid = false;
+          showError(rule.msg);
+        } else {
+          el.classList.remove('err');
+        }
+        isValid = isValid && valid;
+      });
+      return isValid;
+    }
+
+    // フォーム送信時
+    document.getElementById('add-geom').addEventListener('click', () => {
+      const type = elType.value;
+      if (validateInput(type)) {
+        try { if (type === 'polygon') addPolygon(); else addCircle(); showOK(); }
+        catch (e) { showError(e.message || String(e)); }
+      }
+    });
+
+  </script>
+</body>
+
+</html>
