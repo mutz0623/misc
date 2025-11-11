@@ -48,7 +48,12 @@
       display: grid;
       grid-template-columns: 380px 1fr;
       grid-template-rows: 100vh;
-      gap: 0
+      gap: 0;
+      transition: all 0.3s ease
+    }
+
+    .app.sidebar-collapsed {
+      grid-template-columns: 50px 1fr
     }
 
     .sidebar {
@@ -56,7 +61,59 @@
       border-right: 1px solid rgba(0, 0, 0, 0.1);
       padding: 20px;
       overflow: auto;
-      box-shadow: 2px 0 6px rgba(0, 0, 0, 0.1)
+      box-shadow: 2px 0 6px rgba(0, 0, 0, 0.1);
+      transition: all 0.3s ease;
+      position: relative
+    }
+
+    .sidebar.collapsed {
+      padding: 15px 10px;
+      width: 50px;
+      overflow: hidden;
+      white-space: nowrap
+    }
+
+    .sidebar.collapsed>* {
+      display: none
+    }
+
+    .sidebar.collapsed .toggle-sidebar {
+      display: flex !important
+    }
+
+    .toggle-sidebar {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 30px;
+      height: 30px;
+      background: transparent;
+      border: 1px solid rgba(0, 0, 0, 0.2);
+      border-radius: 8px;
+      cursor: pointer;
+      color: var(--text);
+      font-size: 16px;
+      transition: all 0.3s ease;
+      padding: 0;
+      margin-bottom: 10px;
+      flex-shrink: 0
+    }
+
+    .toggle-sidebar:hover {
+      background: var(--accent);
+      color: var(--panel);
+      border-color: var(--accent)
+    }
+
+    @media (prefers-color-scheme: dark) {
+      .toggle-sidebar {
+        border-color: rgba(255, 255, 255, 0.2)
+      }
+
+      .toggle-sidebar:hover {
+        background: var(--accent);
+        color: var(--panel)
+      }
     }
 
     @media (prefers-color-scheme: dark) {
@@ -391,6 +448,7 @@
 <body>
   <div class="app">
     <aside class="sidebar">
+      <button class="toggle-sidebar" id="toggle-sidebar-btn" title="サイドバーを折りたたむ">◀</button>
       <h1>地図範囲可視化</h1>
       <div class="sub">多角形/円を複数追加・表示。座標は <b>度-分-秒</b>・<b>小数</b>・<b>全角</b>・<b>日本語表記</b>にも対応。</div>
 
@@ -447,6 +505,19 @@
               </select>
             </div>
           </div>
+          <div class="row">
+            <div>
+              <label>方角（中心角度, 0=北, 時計回り, °）</label>
+              <input id="circle-direction" type="number" min="0" max="360" step="0.1" placeholder="例: 45"
+                aria-label="扇型の中心方角" />
+            </div>
+            <div>
+              <label>範囲（角度, °）</label>
+              <input id="circle-sector-angle" type="number" min="0" max="360" step="0.1" placeholder="例: 60"
+                aria-label="扇型の角度範囲" />
+            </div>
+          </div>
+          <div class="hint small">方角・範囲を指定すると扇型（セクター）を描画します。空欄なら円全体。</div>
         </div>
 
         <div class="toolbar">
@@ -485,8 +556,37 @@
 
   <script>
     // =============================
-    //  ユーティリティ（全角→半角 / パース）
+    //  サイドバー折りたたみ機能
     // =============================
+    const toggleSidebarBtn = document.getElementById('toggle-sidebar-btn');
+    const sidebar = document.querySelector('.sidebar');
+    const app = document.querySelector('.app');
+    let isCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
+
+    function updateSidebarState() {
+      if (isCollapsed) {
+        sidebar.classList.add('collapsed');
+        app.classList.add('sidebar-collapsed');
+        toggleSidebarBtn.textContent = '▶';
+        toggleSidebarBtn.title = 'サイドバーを展開する';
+      } else {
+        sidebar.classList.remove('collapsed');
+        app.classList.remove('sidebar-collapsed');
+        toggleSidebarBtn.textContent = '◀';
+        toggleSidebarBtn.title = 'サイドバーを折りたたむ';
+      }
+      localStorage.setItem('sidebarCollapsed', isCollapsed);
+      // Leaflet の map resize event を発火させる
+      setTimeout(() => map.invalidateSize(), 300);
+    }
+
+    toggleSidebarBtn.addEventListener('click', () => {
+      isCollapsed = !isCollapsed;
+      updateSidebarState();
+    });
+
+    // ページ読み込み時に前回の状態を復元
+    updateSidebarState();
     const ZEN2HAN_MAP = {
       '０': '0', '１': '1', '２': '2', '３': '3', '４': '4', '５': '5', '６': '6', '７': '7', '８': '8', '９': '9',
       '－': '-', 'ー': '-', '—': '-', '―': '-', '-': '-', '–': '-', '−': '-',
@@ -697,11 +797,21 @@
         toggle.innerHTML = map.hasLayer(r.layer) ? '👁️' : '👁️‍🗨️';
         toggle.addEventListener('click', () => {
           if (map.hasLayer(r.layer)) {
+            // remove the main shape
             map.removeLayer(r.layer);
+            // also remove any associated markers (例：円の中心点)
+            if (r.markers && r.markers.length) {
+              r.markers.forEach(m => { try { if (map.hasLayer(m)) map.removeLayer(m); } catch (e) { } });
+            }
             toggle.innerHTML = '👁️‍🗨️';
             toggle.title = '表示する';
           } else {
+            // add the main shape
             r.layer.addTo(map);
+            // re-add any markers that belong to this region
+            if (r.markers && r.markers.length) {
+              r.markers.forEach(m => { try { if (!map.hasLayer(m)) m.addTo(map); } catch (e) { } });
+            }
             toggle.innerHTML = '👁️';
             toggle.title = '非表示にする';
           }
@@ -796,14 +906,51 @@
       const [lat, lon] = parseLatLon(centerText);
       const radiusMeters = metersFromUnit(elRadius.value, elUnit.value);
       if (!(radiusMeters > 0)) throw new Error('半径は正の値で入力してください');
+      const dirVal = document.getElementById('circle-direction').value.trim();
+      const sectorVal = document.getElementById('circle-sector-angle').value.trim();
       const id = NEXT_ID++;
       const color = pickColor(id);
       const name = elName.value.trim();
-      const layer = L.circle([lat, lon], { radius: radiusMeters, color, weight: 2, opacity: 0.9, fillOpacity: 0.12 });
+      let layer;
+      if (dirVal && sectorVal) {
+        // 扇型（セクター）
+        const direction = parseFloat(dirVal);
+        const sectorAngle = parseFloat(sectorVal);
+        if (isNaN(direction) || isNaN(sectorAngle) || sectorAngle <= 0 || sectorAngle > 360)
+          throw new Error('範囲（角度）は1～360の数値で入力してください');
+        // 0度=北, 時計回り
+        const points = [];
+        const steps = Math.max(12, Math.ceil(sectorAngle / 5));
+        const startAngle = ((direction - sectorAngle / 2) + 360) % 360;
+        const endAngle = ((direction + sectorAngle / 2) + 360) % 360;
+        points.push([lat, lon]); // 中心
+        for (let i = 0; i <= steps; i++) {
+          // 角度を0=北, 時計回りで計算
+          let ang = (startAngle + (sectorAngle * i / steps)) % 360;
+          // 0°=北 → dLat増加, dLng=0
+          // 90°=東 → dLat=0, dLng増加
+          // 180°=南 → dLat減少, dLng=0
+          // 270°=西 → dLat=0, dLng減少
+          let radians = ang * Math.PI / 180;
+          let dLat = (radiusMeters / 6378137) * Math.cos(radians);
+          let dLng = (radiusMeters / 6378137) * Math.sin(radians) / Math.cos(lat * Math.PI / 180);
+          let plat = lat + dLat * 180 / Math.PI;
+          let plon = lon + dLng * 180 / Math.PI;
+          points.push([plat, plon]);
+        }
+        points.push([lat, lon]); // 閉じる
+        layer = L.polygon(points, { color, weight: 2, opacity: 0.9, fillOpacity: 0.15 });
+      } else {
+        // 通常の円
+        layer = L.circle([lat, lon], { radius: radiusMeters, color, weight: 2, opacity: 0.9, fillOpacity: 0.12 });
+      }
       layer.addTo(map);
-      const label = name && name.length ? name : '円';
+      // 円の中心点を常に表示するマーカーを作成しておく
+      const centerMarker = L.marker([lat, lon], { icon: L.divIcon({ className: 'center-marker', html: `<div style="background:${color};width:10px;height:10px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 2px rgba(0,0,0,0.6)"></div>` }) });
+      centerMarker.addTo(map);
+      const label = name && name.length ? name : (dirVal && sectorVal ? '扇型' : '円');
       layer.bindTooltip(`${label} #${id}`, { permanent: true, direction: 'top', offset: [0, -10], className: 'label' });
-      regions.set(id, { id, type: 'circle', name, color, layer, markers: [] });
+      regions.set(id, { id, type: 'circle', name, color, layer, markers: [centerMarker] });
       renderList();
       fitAll();
     }
@@ -858,6 +1005,8 @@
       'circle': [
         { id: 'circle-center', type: 'text', required: true, msg: '中心座標を入力してください' },
         { id: 'circle-radius', type: 'number', required: true, msg: '半径を入力してください' },
+        { id: 'circle-direction', type: 'number', required: false, msg: '方角は0～360の数値で入力してください' },
+        { id: 'circle-sector-angle', type: 'number', required: false, msg: '範囲は1～360の数値で入力してください' },
         { id: 'geom-name', type: 'text', required: false, msg: '名称は任意ですが、わかりやすい名前を推奨します' }
       ]
     };

@@ -270,6 +270,10 @@
           <div class="result-block mono" id="o_latlon_bounds"></div>
           <div class="footer">※ 緯度/経度変換は mgrs ライブラリが読み込まれている場合に実行します。</div>
         </div>
+        <div class="kv" style="grid-column: 1 / -1;">
+          <div class="muted">幾何中心（MGRS / 緯度, 経度 / WGS84）</div>
+          <div class="result-block mono" id="o_centroid"></div>
+        </div>
       </div>
       <div class="footer">
         補足：ここでは 100 km メッシュ内の相対距離（m）と 5桁パディング表記を表示します。地図描画は行いません。
@@ -424,8 +428,21 @@ ${String(zone).padStart(2, '0')}${band} ${col}${row}  NE  ${ne_upper_pair}  (上
 ${fmt(ne_ll[1])} , ${fmt(ne_ll[0])}
 ${fmt(se_ll[1])} , ${fmt(se_ll[0])}
 ${fmt(sw_ll[1])} , ${fmt(sw_ll[0])}`;
+              // 幾何中心（セル内部の中心点）を計算して表示
+              try {
+                const centerE = easting_m.min + (resolution_m / 2);
+                const centerN = northing_m.min + (resolution_m / 2);
+                const centerE5 = pad5(Math.round(centerE));
+                const centerN5 = pad5(Math.round(centerN));
+                const fullCenter = `${zStr}${band}${col}${row}${centerE5}${centerN5}`;
+                const center_ll = window.mgrs.toPoint(fullCenter);
+                $('#o_centroid').textContent = `${fullCenter}\n${fmt(center_ll[1])} , ${fmt(center_ll[0])}`;
+              } catch (ce) {
+                $('#o_centroid').textContent = '中心点計算中にエラーが発生しました: ' + (ce && ce.message ? ce.message : ce);
+              }
         } else {
           $('#o_latlon_bounds').textContent = '緯度/経度変換ライブラリが利用できません。';
+              $('#o_centroid').textContent = '緯度/経度変換ライブラリが利用できません。';
         }
       } catch (err) {
         $('#o_latlon_bounds').textContent = '緯度/経度変換中にエラーが発生しました: ' + (err && err.message ? err.message : err);
