@@ -71,6 +71,7 @@
       font-size: 1rem;
       transition: .18s;
       margin-bottom: 0.5rem;
+      box-sizing: border-box;
     }
 
     input[type="text"]:focus {
@@ -234,7 +235,7 @@
   </header>
   <main>
     <div class="card">
-      <label for="mgrsInput">MGRS（例: <code class="mono">54S VE 17689 58</code> / <code class="mono">54SUE12</code> /
+      <label for="mgrsInput">MGRS（例: <code class="mono">54S VE 176 958</code> / <code class="mono">54SUE12</code> /
         <code class="mono">54SUE</code>）</label>
       <input id="mgrsInput" type="text" placeholder="54SVE17689580" spellcheck="false" />
       <div class="controls">
@@ -491,8 +492,6 @@ ${fmt(sw_ll[1])} , ${fmt(sw_ll[0])}`;
         $('#mgrsInput').focus();
       });
       $('#mgrsInput').addEventListener('keydown', e => { if (e.key === 'Enter') { onCalculate(); } });
-      const demo = new URLSearchParams(location.search).get('q') || '54SVE17689580';
-      $('#mgrsInput').value = demo;
     });
   </script>
 </body>
