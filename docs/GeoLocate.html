@@ -99,11 +99,24 @@
     }
 
     .row {
-      display: grid;
-      grid-template-columns: 1fr auto;
-      gap: 8px;
+      display: flex;
+      justify-content: space-between;
       align-items: center;
-      margin: 8px 0;
+      margin: 12px 0 4px 0;
+    }
+
+    .row-label {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .row-value {
+      margin: 6px 0 12px 0;
+      padding: 8px 12px;
+      background: #fafafa;
+      border-radius: 6px;
     }
 
     .mono {
@@ -301,6 +314,11 @@
         background: #2a2a2a;
         border-color: #333;
       }
+
+      .row-value {
+        background: #2a2a2a;
+        color: #e0e0e0;
+      }
     }
   </style>
 </head>
@@ -339,30 +357,91 @@
 
     <section class="card">
       <h2>緯度経度（各種）</h2>
-      <div class="row"><span class="muted">十進法 (DD)</span><button class="copy" data-copy="dd"></button></div>
-      <div id="dd" class="mono">—</div>
-      <div class="row"><span class="muted">度分 (DDM)</span><button class="copy" data-copy="ddm"></button></div>
-      <div id="ddm" class="mono">—</div>
-      <div class="row"><span class="muted">度分秒 (DMS)</span><button class="copy" data-copy="dms"></button></div>
-      <div id="dms" class="mono">—</div>
-      <div class="row"><span class="muted">Geo URI</span><button class="copy" data-copy="geouri"></button></div>
-      <div id="geouri" class="mono">—</div>
+      <div class="row">
+        <div class="row-label">
+          <span class="muted">十進法 (DD)</span>
+          <button class="copy" data-copy="dd">コピー</button>
+        </div>
+      </div>
+      <div id="dd" class="mono row-value">—</div>
+      <div class="row">
+        <div class="row-label">
+          <span class="muted">度分 (DDM)</span>
+          <button class="copy" data-copy="ddm">コピー</button>
+        </div>
+      </div>
+      <div id="ddm" class="mono row-value">—</div>
+      <div class="row">
+        <div class="row-label">
+          <span class="muted">度分秒 (DMS)</span>
+          <button class="copy" data-copy="dms">コピー</button>
+        </div>
+      </div>
+      <div id="dms" class="mono row-value">—</div>
+      <div class="row">
+        <div class="row-label">
+          <span class="muted">Geo URI</span>
+          <button class="copy" data-copy="geouri">コピー</button>
+        </div>
+      </div>
+      <div id="geouri" class="mono row-value">—</div>
     </section>
 
     <section class="card">
       <h2>UTM & MGRS</h2>
-      <div class="row"><span class="muted">UTM (WGS84)</span><button class="copy" data-copy="utm"></button></div>
-      <div id="utm" class="mono">—</div>
-      <div class="row"><span class="muted">MGRS (100m)</span><button class="copy" data-copy="mgrs"></button></div>
-      <div id="mgrs" class="mono">—</div>
+      <div class="row">
+        <div class="row-label">
+          <span class="muted">UTM (WGS84)</span>
+          <button class="copy" data-copy="utm">コピー</button>
+        </div>
+      </div>
+      <div id="utm" class="mono row-value">—</div>
+      <div class="row">
+        <div class="row-label">
+          <span class="muted">MGRS (1km)</span>
+          <button class="copy" data-copy="mgrs1km">コピー</button>
+        </div>
+      </div>
+      <div id="mgrs1km" class="mono row-value">—</div>
+      <div class="row">
+        <div class="row-label">
+          <span class="muted">MGRS (100m)</span>
+          <button class="copy" data-copy="mgrs100m">コピー</button>
+        </div>
+      </div>
+      <div id="mgrs100m" class="mono row-value">—</div>
+      <div class="row">
+        <div class="row-label">
+          <span class="muted">MGRS (10m)</span>
+          <button class="copy" data-copy="mgrs10m">コピー</button>
+        </div>
+      </div>
+      <div id="mgrs10m" class="mono row-value">—</div>
+      <div class="row">
+        <div class="row-label">
+          <span class="muted">MGRS (1m)</span>
+          <button class="copy" data-copy="mgrs1m">コピー</button>
+        </div>
+      </div>
+      <div id="mgrs1m" class="mono row-value">—</div>
     </section>
 
     <section class="card">
       <h2>Plus Code</h2>
-      <div class="row"><span class="muted">Open Location Code</span><button class="copy" data-copy="olc"></button></div>
-      <div id="olc" class="mono">—</div>
-      <div class="row"><span class="muted">短縮（参照地点なし）</span><button class="copy" data-copy="olc8"></button></div>
-      <div id="olc8" class="mono">—</div>
+      <div class="row">
+        <div class="row-label">
+          <span class="muted">Open Location Code</span>
+          <button class="copy" data-copy="olc">コピー</button>
+        </div>
+      </div>
+      <div id="olc" class="mono row-value">—</div>
+      <div class="row">
+        <div class="row-label">
+          <span class="muted">短縮（参照地点なし）</span>
+          <button class="copy" data-copy="olc8">コピー</button>
+        </div>
+      </div>
+      <div id="olc8" class="mono row-value">—</div>
     </section>
   </main>
 
@@ -429,7 +508,7 @@
       return { zone, hemisphere, easting, northing };
     }
 
-    // UTM → MGRS（100m精度）
+    // UTM → MGRS（複数精度対応）
     const MGRS_COL = ['ABCDEFGH', 'JKLMNPQR', 'STUVWXYZ']; // 8,8,8
     const MGRS_ROW = 'ABCDEFGHJKLMNPQRSTUV'; // 20 letters
     function latitudeBand(lat) {
@@ -439,7 +518,9 @@
       const idx = Math.floor((lat + 80) / 8);
       return bands[idx] || 'X';
     }
-    function utmToMgrs(lat, utm) {
+    function utmToMgrs(lat, utm, precision = 100) {
+      // precision: 1000000, 100000, 10000, 1000, 100, 10, 1
+      // 1km=1000, 100m=100, 10m=10, 1m=1
       const { zone, hemisphere, easting, northing } = utm;
       const band = latitudeBand(lat);
 
@@ -458,11 +539,18 @@
       const finalRow = (n100k + setRow) % 20;
       const row = MGRS_ROW[finalRow];
 
-      // 100mグリッドの数値
-      const e100m = Math.floor((easting % 100000) / 100).toString().padStart(3, '0');
-      const n100m = Math.floor((northing % 100000) / 100).toString().padStart(3, '0');
+      // 精度に応じた数値を計算
+      const relativeEasting = easting % 100000;
+      const relativeNorthing = northing % 100000;
+      const eValue = Math.floor(relativeEasting / precision);
+      const nValue = Math.floor(relativeNorthing / precision);
 
-      return `${zone}${band} ${col}${row} ${e100m} ${n100m}`;
+      // 桁数を計算
+      const digitCount = String(Math.floor(100000 / precision)).length - 1;
+      const eStr = eValue.toString().padStart(digitCount, '0');
+      const nStr = nValue.toString().padStart(digitCount, '0');
+
+      return `${zone}${band} ${col}${row} ${eStr} ${nStr}`;
     }
 
     // ========= Geo handling =========
@@ -491,18 +579,20 @@
       // UTM/MGRS
       const utm = latLonToUTM(lat, lon);
       qs('#utm').textContent = `${utm.zone}${utm.hemisphere} ${utm.easting.toFixed(3)} E, ${utm.northing.toFixed(3)} N`;
-      qs('#mgrs').textContent = utmToMgrs(lat, utm);
+      qs('#mgrs1km').textContent = utmToMgrs(lat, utm, 1000);
+      qs('#mgrs100m').textContent = utmToMgrs(lat, utm, 100);
+      qs('#mgrs10m').textContent = utmToMgrs(lat, utm, 10);
+      qs('#mgrs1m').textContent = utmToMgrs(lat, utm, 1);
       // OLC
       const olc = olcEncode(lat, lon, 11);
       qs('#olc').textContent = olc;
       qs('#olc8').textContent = olcEncode(lat, lon, 10);
       // copy payloads map
-      copyPayload.dd = dd; copyPayload.ddm = ddm; copyPayload.dms = dms; copyPayload.geouri = geouri; copyPayload.utm = qs('#utm').textContent; copyPayload.mgrs = qs('#mgrs').textContent; copyPayload.olc = olc; copyPayload.olc8 = qs('#olc8').textContent;
+      copyPayload.dd = dd; copyPayload.ddm = ddm; copyPayload.dms = dms; copyPayload.geouri = geouri; copyPayload.utm = qs('#utm').textContent; copyPayload.mgrs1km = qs('#mgrs1km').textContent; copyPayload.mgrs100m = qs('#mgrs100m').textContent; copyPayload.mgrs10m = qs('#mgrs10m').textContent; copyPayload.mgrs1m = qs('#mgrs1m').textContent; copyPayload.olc = olc; copyPayload.olc8 = qs('#olc8').textContent;
     }
 
     const copyPayload = {};
     qsa('.copy').forEach(btn => {
-      btn.textContent = 'コピー';
       btn.addEventListener('click', async () => {
         const id = btn.dataset.copy; const text = copyPayload[id];
         if (!text) return;
