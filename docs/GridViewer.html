@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>MGRS Grid Viewer</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #f0f0f0;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    #header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 16px 20px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+      z-index: 100;
+    }
+
+    #header h1 {
+      font-size: 1.5rem;
+      margin: 0 0 4px 0;
+      font-weight: 600;
+    }
+
+    #header p {
+      font-size: 0.9rem;
+      margin: 0;
+      opacity: 0.95;
+    }
+
+    #mapContainer {
+      flex: 1;
+      position: relative;
+      overflow: hidden;
+    }
+
+    #map {
+      width: 100%;
+      height: 100%;
+    }
+
+    .info-panel {
+      position: absolute;
+      bottom: 20px;
+      right: 20px;
+      background: white;
+      border-radius: 12px;
+      padding: 16px 20px;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+      max-width: 340px;
+      font-size: 0.95rem;
+      z-index: 1000;
+      font-family: 'Courier New', monospace;
+    }
+
+    .info-item {
+      margin-bottom: 12px;
+      line-height: 1.4;
+    }
+
+    .info-item:last-child {
+      margin-bottom: 0;
+    }
+
+    .info-label {
+      color: #666;
+      font-size: 0.85rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 4px;
+    }
+
+    .info-value {
+      color: #222;
+      font-weight: 700;
+      font-size: 1rem;
+    }
+
+    .mgrs-value {
+      color: #667eea;
+      font-weight: 700;
+    }
+
+    .coord-label {
+      color: #764ba2;
+      font-weight: 700;
+    }
+
+    .loading {
+      color: #999;
+      font-style: italic;
+    }
+
+    /* MGRS グリッドのスタイル */
+    .mgrs-grid {
+      fill: none;
+      stroke: rgba(102, 126, 234, 0.4);
+      stroke-width: 2;
+      pointer-events: none;
+    }
+
+    .mgrs-grid-label {
+      fill: rgba(102, 126, 234, 0.7);
+      font-size: 12px;
+      font-weight: bold;
+      text-anchor: middle;
+      pointer-events: none;
+      text-shadow: 1px 1px 2px rgba(255, 255, 255, 0.8);
+    }
+
+    /* Dark theme support */
+    @media (prefers-color-scheme: dark) {
+      #header {
+        background: linear-gradient(135deg, #1f2937 0%, #111827 100%);
+      }
+
+      .info-panel {
+        background: #1f2937;
+        color: #e5e7eb;
+      }
+
+      .info-label {
+        color: #9ca3af;
+      }
+
+      .info-value {
+        color: #f3f4f6;
+      }
+
+      .mgrs-grid-label {
+        fill: rgba(102, 126, 234, 0.9);
+        text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+      }
+    }
+
+    /* Locate buttons */
+    .locate-control {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+      border-radius: 4px;
+      overflow: hidden;
+      border: 2px solid rgba(0, 0, 0, 0.2);
+      background: white;
+    }
+    .locate-btn {
+      width: 34px;
+      height: 34px;
+      background: white;
+      border: none;
+      border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      line-height: 1;
+      box-shadow: none;
+    }
+    .locate-btn:last-child {
+      border-bottom: none;
+    }
+    .locate-btn:hover {
+      background: #f4f4f4;
+    }
+    .locate-btn.locating {
+      animation: locate-pulse 1s infinite;
+    }
+    .locate-btn.tracking-active {
+      background: #dbeafe;
+      color: #2563eb;
+    }
+    .locate-btn.tracking-active:hover {
+      background: #bfdbfe;
+    }
+    @keyframes locate-pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    /* GPS marker */
+    .gps-marker {
+      width: 20px;
+      height: 20px;
+    }
+    .gps-marker-dot {
+      width: 14px;
+      height: 14px;
+      background: #2563eb;
+      border: 3px solid white;
+      border-radius: 50%;
+      box-shadow: 0 0 6px rgba(37, 99, 235, 0.6);
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+    }
+    .gps-marker-pulse {
+      width: 20px;
+      height: 20px;
+      background: rgba(37, 99, 235, 0.25);
+      border-radius: 50%;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      animation: gps-pulse 2s infinite;
+    }
+    @keyframes gps-pulse {
+      0% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+      100% { transform: translate(-50%, -50%) scale(3); opacity: 0; }
+    }
+
+    /* Leaflet overrides */
+    .leaflet-control-zoom {
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    .leaflet-control-attribution {
+      font-size: 0.75rem;
+    }
+
+    /* Center point marker */
+    .center-marker {
+      width: 40px;
+      height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+    }
+
+    .center-marker-icon {
+      position: relative;
+      width: 100%;
+      height: 100%;
+    }
+
+    .center-marker-circle {
+      position: absolute;
+      width: 32px;
+      height: 32px;
+      border: 2px solid #ef4444;
+      border-radius: 50%;
+      background: transparent;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      animation: pulse 2s infinite;
+      box-shadow: 0 0 0 1px rgba(239, 68, 68, 0.3);
+    }
+
+    .center-marker-crosshair {
+      position: absolute;
+      width: 20px;
+      height: 2px;
+      background: #ef4444;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+    }
+
+    .center-marker-crosshair::before,
+    .center-marker-crosshair::after {
+      content: '';
+      position: absolute;
+      background: #ef4444;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+    }
+
+    .center-marker-crosshair::before {
+      width: 2px;
+      height: 20px;
+    }
+
+    .center-marker-crosshair::after {
+      width: 4px;
+      height: 4px;
+      background: #ef4444;
+      border-radius: 50%;
+    }
+
+    @keyframes pulse {
+      0%, 100% {
+        box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+      }
+      50% {
+        box-shadow: 0 0 0 6px rgba(239, 68, 68, 0);
+      }
+    }
+
+    @media (prefers-color-scheme: dark) {
+      .center-marker-circle {
+        border-color: #f87171;
+        background: transparent;
+        box-shadow: 0 0 0 1px rgba(248, 113, 113, 0.3);
+      }
+
+      .center-marker-crosshair,
+      .center-marker-crosshair::before,
+      .center-marker-crosshair::after {
+        background: #f87171;
+      }
+
+      @keyframes pulse {
+        0%, 100% {
+          box-shadow: 0 0 0 0 rgba(248, 113, 113, 0.7);
+        }
+        50% {
+          box-shadow: 0 0 0 6px rgba(248, 113, 113, 0);
+        }
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="header">
+    <h1>🗺️ MGRS Grid Viewer</h1>
+    <p>地図中心のWGS84座標とMGRSグリッドをリアルタイム表示</p>
+  </div>
+
+  <div id="mapContainer">
+    <div id="map"></div>
+    <div class="info-panel">
+      <div class="info-item">
+        <div class="info-label">📍 中心座標 (WGS84)</div>
+        <div class="info-value">
+          <span class="coord-label" id="lat">-</span> , 
+          <span class="coord-label" id="lon">-</span>
+        </div>
+      </div>
+      <div class="info-item">
+        <div class="info-label">📐 現在のズームレベル</div>
+        <div class="info-value" id="zoom">-</div>
+      </div>
+      <div class="info-item" id="mgrsSection" style="display: none;">
+        <div class="info-label">🎯 MGRS グリッド</div>
+        <div class="info-value mgrs-value" id="mgrs">-</div>
+      </div>
+      <div class="info-item" id="mgrsGridSection" style="display: none;">
+        <div class="info-label">📦 グリッド範囲 （SW - NE）</div>
+        <div style="font-size: 0.9rem; color: #666; margin-top: 4px;">
+          <div id="mgrsGridBounds" style="line-height: 1.6;"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mgrs@2.1.0/dist/mgrs.js"></script>
+
+  <script>
+    // ===== Global State =====
+    let map = null;
+    let gridLayers = [];
+    let centerMarker = null;
+    let gpsMarker = null;
+    let gpsAccuracyCircle = null;
+    let trackingWatchId = null;
+    const mgrsAvailable = !!(window.mgrs && typeof window.mgrs.forward === 'function');
+
+    // ===== Grid Level Config =====
+    const GRID_LEVELS = [
+      { accuracy: 0, label: '100km', color: '#b91c1c', weight: 4,   opacity: 0.8, fillOpacity: 0.03 },
+      { accuracy: 1, label: '10km',  color: '#ea580c', weight: 3.5, opacity: 0.7, fillOpacity: 0.03 },
+      { accuracy: 2, label: '1km',   color: '#dc2626', weight: 3,   opacity: 0.7, fillOpacity: 0.04 },
+      { accuracy: 3, label: '100m',  color: '#2563eb', weight: 2,   opacity: 0.6, fillOpacity: 0.04 },
+      { accuracy: 4, label: '10m',   color: '#16a34a', weight: 1.5, opacity: 0.5, fillOpacity: 0.05 },
+      { accuracy: 5, label: '1m',    color: '#9333ea', weight: 1,   opacity: 0.5, fillOpacity: 0.08 },
+    ];
+
+    // ===== Utilities =====
+    const $ = sel => document.querySelector(sel);
+
+    function latLonToMGRS(lat, lon, accuracy) {
+      if (!mgrsAvailable) return null;
+      try {
+        return mgrs.forward([lon, lat], accuracy);
+      } catch (e) {
+        return null;
+      }
+    }
+
+    function getMGRSBBox(mgrsStr) {
+      if (!mgrsStr || !mgrsAvailable) return null;
+      try {
+        const bbox = mgrs.inverse(mgrsStr);
+        if (bbox[0] === bbox[2] && bbox[1] === bbox[3]) return null;
+        return bbox; // [west, south, east, north]
+      } catch (e) {
+        return null;
+      }
+    }
+
+    // ===== Map Functions =====
+
+    function updateCenterMarker() {
+      const center = map.getCenter();
+      if (!centerMarker) {
+        centerMarker = L.marker(center, {
+          icon: L.divIcon({
+            className: 'center-marker',
+            html: `<div class="center-marker-icon">
+              <div class="center-marker-circle"></div>
+              <div class="center-marker-crosshair"></div>
+            </div>`,
+            iconSize: [40, 40],
+            iconAnchor: [20, 20]
+          }),
+          interactive: false,
+          keyboard: false
+        }).addTo(map);
+      } else {
+        centerMarker.setLatLng(center);
+      }
+    }
+
+    // 中心位置が所属するグリッドを全レベル重ねて描画
+    function drawCenterGrids() {
+      gridLayers.forEach(layer => {
+        try { map.removeLayer(layer); } catch (e) {}
+      });
+      gridLayers = [];
+
+      if (!mgrsAvailable) return;
+
+      const center = map.getCenter();
+
+      for (const level of GRID_LEVELS) {
+        const cellMgrs = latLonToMGRS(center.lat, center.lng, level.accuracy);
+        if (!cellMgrs) continue;
+
+        const bbox = getMGRSBBox(cellMgrs);
+        if (!bbox) continue;
+
+        const rect = L.rectangle(
+          [[bbox[1], bbox[0]], [bbox[3], bbox[2]]],
+          {
+            color: level.color,
+            weight: level.weight,
+            opacity: level.opacity,
+            fill: true,
+            fillColor: level.color,
+            fillOpacity: level.fillOpacity,
+            interactive: false,
+          }
+        ).addTo(map);
+        gridLayers.push(rect);
+      }
+    }
+
+    // 地図状態の更新
+    function updateDisplay() {
+      const center = map.getCenter();
+      $('#lat').textContent = center.lat.toFixed(6);
+      $('#lon').textContent = center.lng.toFixed(6);
+      $('#zoom').textContent = map.getZoom();
+
+      updateCenterMarker();
+      updateMGRSInfo();
+      drawCenterGrids();
+    }
+
+    // 情報パネル更新（中心座標のMGRS）
+    function updateMGRSInfo() {
+      const center = map.getCenter();
+      const mgrsStr = latLonToMGRS(center.lat, center.lng, 5);
+
+      if (!mgrsStr) {
+        $('#mgrsSection').style.display = 'none';
+        $('#mgrsGridSection').style.display = 'none';
+        return;
+      }
+
+      $('#mgrsSection').style.display = 'block';
+      $('#mgrs').textContent = mgrsStr;
+
+      const bbox = getMGRSBBox(mgrsStr);
+      if (bbox) {
+        $('#mgrsGridSection').style.display = 'block';
+        $('#mgrsGridBounds').innerHTML =
+          `<strong>SW:</strong> ${bbox[1].toFixed(6)}, ${bbox[0].toFixed(6)}<br><strong>NE:</strong> ${bbox[3].toFixed(6)}, ${bbox[2].toFixed(6)}`;
+      } else {
+        $('#mgrsGridSection').style.display = 'none';
+      }
+    }
+
+    // ===== GPS Marker =====
+    function updateGpsMarker(pos) {
+      const latlng = [pos.coords.latitude, pos.coords.longitude];
+      const accuracy = pos.coords.accuracy;
+
+      if (!gpsMarker) {
+        gpsMarker = L.marker(latlng, {
+          icon: L.divIcon({
+            className: 'gps-marker',
+            html: '<div class="gps-marker-pulse"></div><div class="gps-marker-dot"></div>',
+            iconSize: [20, 20],
+            iconAnchor: [10, 10]
+          }),
+          interactive: false,
+          zIndexOffset: 2000
+        }).addTo(map);
+      } else {
+        gpsMarker.setLatLng(latlng);
+      }
+
+      if (!gpsAccuracyCircle) {
+        gpsAccuracyCircle = L.circle(latlng, {
+          radius: accuracy,
+          color: '#2563eb',
+          fillColor: '#2563eb',
+          fillOpacity: 0.1,
+          weight: 1,
+          interactive: false
+        }).addTo(map);
+      } else {
+        gpsAccuracyCircle.setLatLng(latlng);
+        gpsAccuracyCircle.setRadius(accuracy);
+      }
+    }
+
+    function removeGpsMarker() {
+      if (gpsMarker) { map.removeLayer(gpsMarker); gpsMarker = null; }
+      if (gpsAccuracyCircle) { map.removeLayer(gpsAccuracyCircle); gpsAccuracyCircle = null; }
+    }
+
+    // ===== Initialization =====
+    document.addEventListener('DOMContentLoaded', () => {
+      map = L.map('map').setView([36.10377, 140.08785], 15);
+
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap contributors',
+        maxZoom: 19,
+      }).addTo(map);
+
+      map.on('move', updateDisplay);
+      map.on('zoom', updateDisplay);
+
+      // 現在地コントロール（単発 / 追従）
+      const LocateControl = L.Control.extend({
+        options: { position: 'topleft' },
+        onAdd() {
+          const container = L.DomUtil.create('div', 'locate-control leaflet-bar');
+          L.DomEvent.disableClickPropagation(container);
+
+          // 単発ボタン
+          const btnOnce = L.DomUtil.create('div', 'locate-btn', container);
+          btnOnce.title = '現在地へ移動（単発）';
+          btnOnce.innerHTML = '📌';
+          btnOnce.addEventListener('click', () => {
+            if (!navigator.geolocation) return alert('このブラウザは位置情報に対応していません');
+            btnOnce.classList.add('locating');
+            navigator.geolocation.getCurrentPosition(
+              (pos) => {
+                btnOnce.classList.remove('locating');
+                const latlng = [pos.coords.latitude, pos.coords.longitude];
+                map.setView(latlng, Math.max(map.getZoom(), 17));
+                updateGpsMarker(pos);
+              },
+              (err) => {
+                btnOnce.classList.remove('locating');
+                alert('位置情報を取得できませんでした: ' + err.message);
+              },
+              { enableHighAccuracy: true, timeout: 10000 }
+            );
+          });
+
+          // 追従ボタン
+          const btnTrack = L.DomUtil.create('div', 'locate-btn', container);
+          btnTrack.title = '現在地を追従';
+          btnTrack.innerHTML = '🔄';
+          btnTrack.addEventListener('click', () => {
+            if (!navigator.geolocation) return alert('このブラウザは位置情報に対応していません');
+
+            if (trackingWatchId !== null) {
+              // 追従停止
+              navigator.geolocation.clearWatch(trackingWatchId);
+              trackingWatchId = null;
+              btnTrack.classList.remove('tracking-active');
+              removeGpsMarker();
+              return;
+            }
+
+            // 追従開始
+            btnTrack.classList.add('tracking-active');
+            trackingWatchId = navigator.geolocation.watchPosition(
+              (pos) => {
+                const latlng = [pos.coords.latitude, pos.coords.longitude];
+                map.setView(latlng, Math.max(map.getZoom(), 17));
+                updateGpsMarker(pos);
+              },
+              (err) => {
+                navigator.geolocation.clearWatch(trackingWatchId);
+                trackingWatchId = null;
+                btnTrack.classList.remove('tracking-active');
+                removeGpsMarker();
+                alert('位置情報を取得できませんでした: ' + err.message);
+              },
+              { enableHighAccuracy: true, timeout: 10000, maximumAge: 2000 }
+            );
+          });
+
+          return container;
+        }
+      });
+      map.addControl(new LocateControl());
+
+      updateDisplay();
+    });
+  </script>
+</body>
+</html>
