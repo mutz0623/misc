@@ -373,7 +373,33 @@
     let gpsMarker = null;
     let gpsAccuracyCircle = null;
     let trackingWatchId = null;
+    let wakeLock = null;
     const mgrsAvailable = !!(window.mgrs && typeof window.mgrs.forward === 'function');
+
+    // ===== Wake Lock =====
+    async function requestWakeLock() {
+      if (!('wakeLock' in navigator)) return;
+      try {
+        wakeLock = await navigator.wakeLock.request('screen');
+        wakeLock.addEventListener('release', () => { wakeLock = null; });
+      } catch (e) {
+        console.warn('Wake Lock 取得失敗:', e);
+      }
+    }
+
+    function releaseWakeLock() {
+      if (wakeLock) {
+        wakeLock.release();
+        wakeLock = null;
+      }
+    }
+
+    // ページ再表示時に追従中なら Wake Lock を再取得
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible' && trackingWatchId !== null) {
+        requestWakeLock();
+      }
+    });
 
     // ===== Grid Level Config =====
     const GRID_LEVELS = [
@@ -594,12 +620,14 @@
               navigator.geolocation.clearWatch(trackingWatchId);
               trackingWatchId = null;
               btnTrack.classList.remove('tracking-active');
+              releaseWakeLock();
               removeGpsMarker();
               return;
             }
 
             // 追従開始
             btnTrack.classList.add('tracking-active');
+            requestWakeLock();
             trackingWatchId = navigator.geolocation.watchPosition(
               (pos) => {
                 const latlng = [pos.coords.latitude, pos.coords.longitude];
@@ -610,6 +638,7 @@
                 navigator.geolocation.clearWatch(trackingWatchId);
                 trackingWatchId = null;
                 btnTrack.classList.remove('tracking-active');
+                releaseWakeLock();
                 removeGpsMarker();
                 alert('位置情報を取得できませんでした: ' + err.message);
               },
