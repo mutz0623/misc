@@ -1,0 +1,1129 @@
+<!doctype html>
+<html lang="ja">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Rain Sound</title>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Roboto', sans-serif;
+      background-color: #f4f4f9;
+      color: #333;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+    }
+
+    .wrap {
+      background: #fff;
+      padding: 20px 30px;
+      border-radius: 10px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      max-width: 720px;
+      width: 90%;
+    }
+
+    h1 {
+      font-size: 20px;
+      margin: 0 0 12px;
+      font-weight: 700;
+    }
+
+    .section-label {
+      font-size: 13px;
+      font-weight: 700;
+      margin: 16px 0 8px;
+      color: #555;
+    }
+
+    .slider-row {
+      display: grid;
+      grid-template-columns: 100px 1fr 48px;
+      gap: 10px;
+      align-items: center;
+      margin: 6px 0;
+    }
+
+    .slider-row label {
+      font-size: 12px;
+      color: #666;
+    }
+
+    .slider-row .value {
+      font-size: 12px;
+      color: #666;
+      text-align: right;
+    }
+
+    input[type="range"] {
+      width: 100%;
+      margin: 0;
+    }
+
+    .controls {
+      display: flex;
+      gap: 10px;
+      margin-top: 16px;
+    }
+
+    button {
+      padding: 10px 14px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      background: #fff;
+      color: #333;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    button.primary {
+      background: #007BFF;
+      color: #fff;
+      border-color: transparent;
+    }
+
+    button:hover {
+      background: #f0f0f0;
+    }
+
+    button.primary:hover {
+      background: #0056b3;
+    }
+
+    button.active {
+      background: #28a745;
+      color: #fff;
+      border-color: transparent;
+    }
+
+    button.active:hover {
+      background: #218838;
+    }
+
+    .timer-row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      margin: 8px 0;
+    }
+
+    .timer-row button {
+      padding: 6px 12px;
+      font-size: 12px;
+    }
+
+    .timer-display {
+      font-size: 13px;
+      font-weight: 700;
+      color: #007BFF;
+      min-width: 60px;
+    }
+
+    .status {
+      margin-top: 10px;
+      font-size: 12px;
+      color: #666;
+    }
+
+    .description {
+      margin-top: 16px;
+      padding: 12px;
+      background: #f9f9fb;
+      border-radius: 8px;
+      font-size: 11px;
+      color: #666;
+      line-height: 1.6;
+    }
+
+    .description h2 {
+      font-size: 13px;
+      margin: 0 0 6px;
+      color: #555;
+    }
+
+    .description code {
+      background: #e8e8ec;
+      padding: 1px 4px;
+      border-radius: 3px;
+      font-size: 11px;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      body {
+        background-color: #121212;
+        color: #e0e0e0;
+      }
+
+      .wrap {
+        background: #1e1e1e;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.5);
+      }
+
+      .section-label {
+        color: #aaa;
+      }
+
+      .slider-row label,
+      .slider-row .value {
+        color: #999;
+      }
+
+      button {
+        background: #2d2d2d;
+        color: #e0e0e0;
+        border-color: #404040;
+      }
+
+      button:hover {
+        background: #3d3d3d;
+      }
+
+      button.primary {
+        background: #80bfff;
+        color: #121212;
+      }
+
+      button.primary:hover {
+        background: #4da6ff;
+      }
+
+      button.active {
+        background: #4caf50;
+        color: #121212;
+      }
+
+      button.active:hover {
+        background: #66bb6a;
+      }
+
+      .timer-display {
+        color: #80bfff;
+      }
+
+      .status {
+        color: #999;
+      }
+
+      .description {
+        background: #252528;
+        color: #999;
+      }
+
+      .description h2 {
+        color: #bbb;
+      }
+
+      .description code {
+        background: #333;
+        color: #ccc;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+    <h1>雨音ジェネレータ（技術サンプル）</h1>
+
+    <div class="section-label">レイヤーミックス</div>
+
+    <div class="slider-row">
+      <label>ベース雨音</label>
+      <input type="range" id="baseGain" min="0" max="100" value="25">
+      <div class="value" id="baseGainVal">25%</div>
+    </div>
+
+    <div class="slider-row">
+      <label>雨粒ディテール</label>
+      <input type="range" id="detailGain" min="0" max="100" value="40">
+      <div class="value" id="detailGainVal">40%</div>
+    </div>
+
+    <div class="slider-row">
+      <label>水しぶき</label>
+      <input type="range" id="splashGain" min="0" max="100" value="20">
+      <div class="value" id="splashGainVal">20%</div>
+    </div>
+
+    <div class="slider-row">
+      <label>雨粒パチパチ</label>
+      <input type="range" id="dropGain" min="0" max="100" value="50">
+      <div class="value" id="dropGainVal">50%</div>
+    </div>
+
+    <div class="section-label">全体設定</div>
+
+    <div class="slider-row">
+      <label>マスター音量</label>
+      <input type="range" id="masterVolume" min="0" max="100" value="30">
+      <div class="value" id="masterVolumeVal">30%</div>
+    </div>
+
+    <div class="slider-row">
+      <label>雨の強さ</label>
+      <input type="range" id="intensity" min="0" max="100" value="50">
+      <div class="value" id="intensityVal">50%</div>
+    </div>
+
+    <div class="controls">
+      <button id="start" class="primary">雨音 再生</button>
+      <button id="stop">雨音 停止</button>
+    </div>
+
+    <div class="status" id="status">雨音: 停止中</div>
+
+    <div class="section-label">遠雷</div>
+
+    <div class="slider-row">
+      <label>遠雷音量</label>
+      <input type="range" id="thunderGain" min="0" max="100" value="30">
+      <div class="value" id="thunderGainVal">30%</div>
+    </div>
+
+    <div class="slider-row">
+      <label>遠雷頻度</label>
+      <input type="range" id="thunderFreq" min="5" max="120" value="30">
+      <div class="value" id="thunderFreqVal">30秒</div>
+    </div>
+
+    <div class="controls">
+      <button id="thunderStart" class="primary">遠雷 再生</button>
+      <button id="thunderStop">遠雷 停止</button>
+    </div>
+
+    <div class="status" id="thunderStatus">遠雷: 停止中</div>
+
+    <div class="section-label">スリープタイマー</div>
+    <div class="timer-row">
+      <button id="timer15">15分</button>
+      <button id="timer30">30分</button>
+      <button id="timer60">1時間</button>
+      <button id="timerCancel">解除</button>
+      <div class="timer-display" id="timerDisplay"></div>
+    </div>
+
+    <div class="description">
+      <h2>技術構成</h2>
+      <p>
+        4つのノイズレイヤーを合成して雨音を生成しています。<br>
+        <strong>① ベース雨音:</strong> ブラウニアンノイズ →
+        <code>lowpass</code> (800Hz) + <code>highpass</code> (100Hz) → LFO揺らぎ<br>
+        <strong>② 雨粒ディテール:</strong> ホワイトノイズ →
+        <code>bandpass</code> (2500Hz, Q=0.8) → LFO揺らぎ<br>
+        <strong>③ 水しぶき:</strong> ホワイトノイズ →
+        <code>highpass</code> (5000Hz) + <code>lowpass</code> (12000Hz) → LFO揺らぎ<br>
+        <strong>④ 雨粒パチパチ:</strong> 短いノイズバースト(5〜30ms) →
+        <code>bandpass</code> (ランダム 2000〜6000Hz) × エンベロープ減衰 → ランダム間隔で発火<br>
+        ①〜③は連続ノイズ+LFO揺らぎ、④は個別の雨粒インパクトを離散的にスケジューリングしています。<br>
+        <strong>⑤ 遠雷:</strong> ブラウニアンノイズ(1〜3秒) →
+        <code>lowpass</code> (150Hz) + エンベロープ(attack/decay) → 10〜60秒間隔でランダム発火
+      </p>
+    </div>
+  </div>
+
+  <script>
+    (() => {
+      /* =========================================================
+       *  ノイズバッファ生成ユーティリティ
+       * ========================================================= */
+
+      /** ホワイトノイズバッファを生成 */
+      function createWhiteNoiseBuffer(ctx, duration = 2) {
+        const length = ctx.sampleRate * duration;
+        const buffer = ctx.createBuffer(1, length, ctx.sampleRate);
+        const data = buffer.getChannelData(0);
+        for (let i = 0; i < length; i++) {
+          data[i] = Math.random() * 2 - 1;
+        }
+        return buffer;
+      }
+
+      /** ブラウニアンノイズバッファを生成 */
+      function createBrownNoiseBuffer(ctx, duration = 2) {
+        const length = ctx.sampleRate * duration;
+        const buffer = ctx.createBuffer(1, length, ctx.sampleRate);
+        const data = buffer.getChannelData(0);
+        let last = 0;
+        for (let i = 0; i < length; i++) {
+          const white = Math.random() * 2 - 1;
+          last = (last + 0.02 * white) / 1.02;
+          data[i] = last * 3.5;
+        }
+        return buffer;
+      }
+
+      /* =========================================================
+       *  レイヤー構築関数
+       * ========================================================= */
+
+      /**
+       * レイヤー① ベース雨音
+       * BrownNoise → LowPass(800Hz) → HighPass(100Hz) → LFO付きGain
+       */
+      function createBaseRainLayer(ctx, destination) {
+        const source = ctx.createBufferSource();
+        source.buffer = createBrownNoiseBuffer(ctx, 2);
+        source.loop = true;
+
+        // ローパスフィルタ: 高域を削って「ザー」感を出す
+        const lp = ctx.createBiquadFilter();
+        lp.type = 'lowpass';
+        lp.frequency.value = 800;
+
+        // ハイパスフィルタ: 超低域のモコモコを除去
+        const hp = ctx.createBiquadFilter();
+        hp.type = 'highpass';
+        hp.frequency.value = 100;
+
+        // レイヤーゲイン
+        const gain = ctx.createGain();
+        gain.gain.value = 0.25;
+
+        // LFO: 自然な揺らぎ（30秒〜1分周期のゆっくりした音量変動）
+        const lfo = ctx.createOscillator();
+        lfo.type = 'sine';
+        lfo.frequency.value = 0.025; // 約40秒周期
+        const lfoGain = ctx.createGain();
+        lfoGain.gain.value = 0.08; // 揺れ幅（ゆっくりなので控えめに）
+
+        lfo.connect(lfoGain);
+        lfoGain.connect(gain.gain);
+
+        source.connect(lp);
+        lp.connect(hp);
+        hp.connect(gain);
+        gain.connect(destination);
+
+        source.start();
+        lfo.start();
+
+        return { source, gain, lfo, filters: [lp, hp] };
+      }
+
+      /**
+       * レイヤー② 雨粒ディテール
+       * WhiteNoise → BandPass(2500Hz, Q=0.8) → LFO付きGain
+       */
+      function createDetailLayer(ctx, destination) {
+        const source = ctx.createBufferSource();
+        source.buffer = createWhiteNoiseBuffer(ctx, 2);
+        source.loop = true;
+
+        // バンドパスフィルタ: 雨粒のぱちぱち感を強調
+        const bp = ctx.createBiquadFilter();
+        bp.type = 'bandpass';
+        bp.frequency.value = 2500;
+        bp.Q.value = 0.8;
+
+        const gain = ctx.createGain();
+        gain.gain.value = 0.4;
+
+        // LFO（ベースと異なる周波数で独立変動）
+        const lfo = ctx.createOscillator();
+        lfo.type = 'sine';
+        lfo.frequency.value = 0.07;
+        const lfoGain = ctx.createGain();
+        lfoGain.gain.value = 0.12;
+
+        lfo.connect(lfoGain);
+        lfoGain.connect(gain.gain);
+
+        source.connect(bp);
+        bp.connect(gain);
+        gain.connect(destination);
+
+        source.start();
+        lfo.start();
+
+        return { source, gain, lfo, filters: [bp] };
+      }
+
+      /**
+       * レイヤー③ 水しぶき・高域
+       * WhiteNoise → HighPass(5000Hz) → LowPass(12000Hz) → LFO付きGain
+       */
+      function createSplashLayer(ctx, destination) {
+        const source = ctx.createBufferSource();
+        source.buffer = createWhiteNoiseBuffer(ctx, 2);
+        source.loop = true;
+
+        const hp = ctx.createBiquadFilter();
+        hp.type = 'highpass';
+        hp.frequency.value = 5000;
+
+        const lp = ctx.createBiquadFilter();
+        lp.type = 'lowpass';
+        lp.frequency.value = 12000;
+
+        const gain = ctx.createGain();
+        gain.gain.value = 0.2;
+
+        const lfo = ctx.createOscillator();
+        lfo.type = 'sine';
+        lfo.frequency.value = 0.18;
+        const lfoGain = ctx.createGain();
+        lfoGain.gain.value = 0.08;
+
+        lfo.connect(lfoGain);
+        lfoGain.connect(gain.gain);
+
+        source.connect(hp);
+        hp.connect(lp);
+        lp.connect(gain);
+        gain.connect(destination);
+
+        source.start();
+        lfo.start();
+
+        return { source, gain, lfo, filters: [hp, lp] };
+      }
+
+      /**
+       * レイヤー④ 雨粒パチパチ（離散インパクト）
+       * 短いノイズバーストをランダム間隔でスケジューリングし、
+       * 雨粒が地面に落ちた瞬間の「パチッ」音を再現する。
+       */
+      function createDropImpactLayer(ctx, destination) {
+        const gain = ctx.createGain();
+        gain.gain.value = 0.50;
+        gain.connect(destination);
+
+        // 短いノイズバースト用バッファを複数用意（バリエーション）
+        const burstBuffers = [];
+        for (let v = 0; v < 6; v++) {
+          const dur = 0.01 + Math.random() * 0.04; // 10ms〜50ms（長めにして存在感アップ）
+          const len = Math.ceil(ctx.sampleRate * dur);
+          const buf = ctx.createBuffer(1, len, ctx.sampleRate);
+          const d = buf.getChannelData(0);
+          for (let i = 0; i < len; i++) {
+            // 緩やかな指数減衰エンベロープ付きホワイトノイズ
+            const env = Math.exp(-i / (len * 0.4));
+            d[i] = (Math.random() * 2 - 1) * env * 2.0;  // 振幅×2
+          }
+          burstBuffers.push(buf);
+        }
+
+        let schedulerTimer = null;
+        let active = true;
+
+        function scheduleDrop() {
+          if (!active) return;
+
+          const now = ctx.currentTime;
+
+          // 1回に1〜3粒まとめて鳴らす（自然なクラスタ感）
+          const count = 1 + Math.floor(Math.random() * 3);
+          for (let i = 0; i < count; i++) {
+            const offset = i * (0.005 + Math.random() * 0.02);
+            const src = ctx.createBufferSource();
+            src.buffer = burstBuffers[Math.floor(Math.random() * burstBuffers.length)];
+
+            // ランダムなピッチシフトでバリエーション
+            src.playbackRate.value = 0.6 + Math.random() * 1.8;
+
+            // 各粒にランダムなバンドパスフィルタ（Q低めで広帯域を通す）
+            const bp = ctx.createBiquadFilter();
+            bp.type = 'bandpass';
+            bp.frequency.value = 2000 + Math.random() * 4000; // 2000〜6000Hz
+            bp.Q.value = 0.3 + Math.random() * 0.7;           // Q: 0.3〜1.0（広め）
+
+            // 個別粒の音量ばらつき（底上げ）
+            const dropGain = ctx.createGain();
+            dropGain.gain.value = 0.7 + Math.random() * 0.3;  // 0.7〜1.0
+
+            // ステレオ定位のランダム化
+            let panner = null;
+            if (ctx.createStereoPanner) {
+              panner = ctx.createStereoPanner();
+              panner.pan.value = Math.random() * 2 - 1;
+              src.connect(bp);
+              bp.connect(dropGain);
+              dropGain.connect(panner);
+              panner.connect(gain);
+            } else {
+              src.connect(bp);
+              bp.connect(dropGain);
+              dropGain.connect(gain);
+            }
+
+            src.start(now + offset);
+          }
+
+          // 次の発火までのランダム間隔
+          // intensity に応じて調整される（外部から dropInterval を書き換え可能）
+          const interval = layer.dropInterval * (0.5 + Math.random());
+          schedulerTimer = setTimeout(scheduleDrop, interval * 1000);
+        }
+
+        const layer = {
+          gain,
+          dropInterval: 0.08, // 秒（デフォルト: 強さ中程度）
+          stop() {
+            active = false;
+            if (schedulerTimer) clearTimeout(schedulerTimer);
+          },
+          filters: []
+        };
+
+        scheduleDrop();
+        return layer;
+      }
+
+      /**
+       * レイヤー⑤ 遠くの落雷
+       * 3つのサブレイヤーを組み合わせてリアルな遠雷を再現:
+       *   (a) 初撃クラック: 鋭い広帯域ノイズの瞬間パルス
+       *   (b) ゴロゴロ本体: 複数ピークを持つ転がるような低域ランブル
+       *   (c) サブベース: 体に響く超低域の圧力感
+       */
+      function createThunderLayer(ctx, destination) {
+        const gain = ctx.createGain();
+        gain.gain.value = 0.30;
+        gain.connect(destination);
+
+        let schedulerTimer = null;
+        let active = true;
+
+        /** 複数ピークのランブルエンベロープをスケジュール */
+        function scheduleRumbleEnvelope(envGain, startTime, duration, peakLevel) {
+          // 2〜4回の山を持つ「転がる」エンベロープ
+          const peakCount = 2 + Math.floor(Math.random() * 3);
+          const segLen = duration / peakCount;
+          let t = startTime;
+
+          envGain.gain.setValueAtTime(0, startTime);
+
+          for (let p = 0; p < peakCount; p++) {
+            const riseTime = segLen * (0.1 + Math.random() * 0.3);
+            const level = peakLevel * (0.4 + Math.random() * 0.6) * (1 - p * 0.15);
+            const fallTime = segLen - riseTime;
+
+            envGain.gain.linearRampToValueAtTime(level, t + riseTime);
+            const nextBase = level * (0.05 + Math.random() * 0.15);
+            envGain.gain.exponentialRampToValueAtTime(Math.max(nextBase, 0.001), t + riseTime + fallTime);
+            t += segLen;
+          }
+          envGain.gain.linearRampToValueAtTime(0, startTime + duration);
+        }
+
+        function scheduleThunder() {
+          if (!active) return;
+
+          const now = ctx.currentTime;
+          const totalDuration = 2.5 + Math.random() * 3.5; // 2.5〜6秒
+
+          // ─── (a) 初撃クラック ───
+          // 明確な「バリッ！」を出す: 2段構成（鋭いアタック＋短いテール）
+          {
+            // アタック部分: 極短（5〜15ms）のハイエナジーバースト
+            const attackDur = 0.005 + Math.random() * 0.01;
+            const attackLen = Math.ceil(ctx.sampleRate * attackDur);
+            const attackBuf = ctx.createBuffer(1, attackLen, ctx.sampleRate);
+            const ad = attackBuf.getChannelData(0);
+            for (let i = 0; i < attackLen; i++) {
+              const env = Math.exp(-i / (attackLen * 0.25));
+              ad[i] = (Math.random() * 2 - 1) * env * 4.0; // 高振幅
+            }
+            const attackSrc = ctx.createBufferSource();
+            attackSrc.buffer = attackBuf;
+            attackSrc.playbackRate.value = 0.8 + Math.random() * 0.4;
+
+            // アタックは高域も通す（パキッと感）
+            const attackLp = ctx.createBiquadFilter();
+            attackLp.type = 'lowpass';
+            attackLp.frequency.value = 2000 + Math.random() * 1500; // 2000〜3500Hz
+            attackLp.Q.value = 0.5;
+
+            // 中域をブーストして存在感を出す
+            const attackPeak = ctx.createBiquadFilter();
+            attackPeak.type = 'peaking';
+            attackPeak.frequency.value = 800 + Math.random() * 400; // 800〜1200Hz
+            attackPeak.Q.value = 1.5;
+            attackPeak.gain.value = 8;
+
+            const attackGain = ctx.createGain();
+            attackGain.gain.value = 1.2 + Math.random() * 0.8; // 1.2〜2.0
+
+            attackSrc.connect(attackLp);
+            attackLp.connect(attackPeak);
+            attackPeak.connect(attackGain);
+            attackGain.connect(gain);
+            attackSrc.start(now);
+
+            // テール部分: アタック直後に続く余韻（80〜200ms）
+            const tailDur = 0.08 + Math.random() * 0.12;
+            const tailLen = Math.ceil(ctx.sampleRate * tailDur);
+            const tailBuf = ctx.createBuffer(1, tailLen, ctx.sampleRate);
+            const td = tailBuf.getChannelData(0);
+            for (let i = 0; i < tailLen; i++) {
+              const env = Math.exp(-i / (tailLen * 0.15));
+              td[i] = (Math.random() * 2 - 1) * env * 2.5;
+            }
+            const tailSrc = ctx.createBufferSource();
+            tailSrc.buffer = tailBuf;
+            tailSrc.playbackRate.value = 0.6 + Math.random() * 0.4;
+
+            // テールは距離感を出すためやや低め
+            const tailLp = ctx.createBiquadFilter();
+            tailLp.type = 'lowpass';
+            tailLp.frequency.value = 1200 + Math.random() * 800; // 1200〜2000Hz
+            tailLp.Q.value = 0.7;
+
+            const tailGain = ctx.createGain();
+            tailGain.gain.value = 0.6 + Math.random() * 0.4;
+
+            tailSrc.connect(tailLp);
+            tailLp.connect(tailGain);
+            tailGain.connect(gain);
+            tailSrc.start(now + attackDur * 0.5); // アタックと少し重ねる
+          }
+
+          // ─── (b) ゴロゴロ本体（メインランブル）───
+          {
+            const rumbleLen = Math.ceil(ctx.sampleRate * totalDuration);
+            const rumbleBuf = ctx.createBuffer(1, rumbleLen, ctx.sampleRate);
+            const rd = rumbleBuf.getChannelData(0);
+            let last = 0;
+            for (let i = 0; i < rumbleLen; i++) {
+              const w = Math.random() * 2 - 1;
+              last = (last + 0.02 * w) / 1.02;
+              rd[i] = last * 8.0; // 振幅アップ（5→8）
+            }
+            const rumbleSrc = ctx.createBufferSource();
+            rumbleSrc.buffer = rumbleBuf;
+
+            // 低域メインのフィルタリング（帯域をやや広げる）
+            const rumbleLp = ctx.createBiquadFilter();
+            rumbleLp.type = 'lowpass';
+            rumbleLp.frequency.value = 220 + Math.random() * 180; // 220〜400Hz
+            rumbleLp.Q.value = 0.8;
+
+            // ピーキングで100Hz付近をブースト（ゴロゴロ感の強調）
+            const rumblePeak = ctx.createBiquadFilter();
+            rumblePeak.type = 'peaking';
+            rumblePeak.frequency.value = 80 + Math.random() * 60; // 80〜140Hz
+            rumblePeak.Q.value = 1.0;
+            rumblePeak.gain.value = 9; // ブースト増（6→9dB）
+
+            // 転がるエンベロープ
+            const rumbleEnv = ctx.createGain();
+            const peakLevel = 0.9 + Math.random() * 0.5; // ピークレベル増（0.6-1.0→0.9-1.4）
+            const rumbleDelay = 0.05 + Math.random() * 0.15; // クラックの少し後に到達
+            scheduleRumbleEnvelope(rumbleEnv, now + rumbleDelay, totalDuration - rumbleDelay, peakLevel);
+
+            rumbleSrc.connect(rumbleLp);
+            rumbleLp.connect(rumblePeak);
+            rumblePeak.connect(rumbleEnv);
+            rumbleEnv.connect(gain);
+            rumbleSrc.start(now + rumbleDelay);
+          }
+
+          // ─── (c) サブベース（超低域の圧力）───
+          {
+            const subLen = Math.ceil(ctx.sampleRate * totalDuration);
+            const subBuf = ctx.createBuffer(1, subLen, ctx.sampleRate);
+            const sd = subBuf.getChannelData(0);
+            let last = 0;
+            for (let i = 0; i < subLen; i++) {
+              const w = Math.random() * 2 - 1;
+              last = (last + 0.01 * w) / 1.01; // より滑らか
+              sd[i] = last * 6.0;
+            }
+            const subSrc = ctx.createBufferSource();
+            subSrc.buffer = subBuf;
+
+            const subLp = ctx.createBiquadFilter();
+            subLp.type = 'lowpass';
+            subLp.frequency.value = 60 + Math.random() * 40; // 60〜100Hz
+            subLp.Q.value = 0.5;
+
+            const subEnv = ctx.createGain();
+            const subDelay = 0.1 + Math.random() * 0.2;
+            const subPeak = 0.4 + Math.random() * 0.3;
+            subEnv.gain.setValueAtTime(0, now + subDelay);
+            subEnv.gain.linearRampToValueAtTime(subPeak, now + subDelay + 0.4);
+            subEnv.gain.exponentialRampToValueAtTime(0.001, now + totalDuration);
+
+            subSrc.connect(subLp);
+            subLp.connect(subEnv);
+            subEnv.connect(gain);
+            subSrc.start(now + subDelay);
+          }
+
+          // ─── 途中の追加クラック（反射・二次放電）───
+          const extraCracks = Math.floor(Math.random() * 3); // 0〜2回
+          for (let c = 0; c < extraCracks; c++) {
+            const t = 0.3 + Math.random() * (totalDuration * 0.5);
+            const cLen = Math.ceil(ctx.sampleRate * (0.03 + Math.random() * 0.06));
+            const cBuf = ctx.createBuffer(1, cLen, ctx.sampleRate);
+            const cd = cBuf.getChannelData(0);
+            for (let i = 0; i < cLen; i++) {
+              const env = Math.exp(-i / (cLen * 0.1));
+              cd[i] = (Math.random() * 2 - 1) * env;
+            }
+            const cSrc = ctx.createBufferSource();
+            cSrc.buffer = cBuf;
+
+            const cLp = ctx.createBiquadFilter();
+            cLp.type = 'lowpass';
+            cLp.frequency.value = 500 + Math.random() * 500;
+            cLp.Q.value = 0.5;
+
+            const cGain = ctx.createGain();
+            cGain.gain.value = 0.15 + Math.random() * 0.25;
+
+            cSrc.connect(cLp);
+            cLp.connect(cGain);
+            cGain.connect(gain);
+            cSrc.start(now + t);
+          }
+
+          // 次の雷までの間隔
+          const interval = layer.thunderInterval * (0.5 + Math.random());
+          schedulerTimer = setTimeout(scheduleThunder, interval * 1000);
+        }
+
+        const layer = {
+          gain,
+          thunderInterval: 30, // 秒（デフォルト: 30秒前後）
+          stop() {
+            active = false;
+            if (schedulerTimer) clearTimeout(schedulerTimer);
+          },
+          filters: []
+        };
+
+        // 初回は少し待ってから最初の雷を鳴らす
+        const firstDelay = 5 + Math.random() * 15; // 5〜20秒後
+        schedulerTimer = setTimeout(scheduleThunder, firstDelay * 1000);
+
+        return layer;
+      }
+
+      /* =========================================================
+       *  雨の強さによるフィルタパラメータ調整
+       * ========================================================= */
+      function applyIntensity(layers, thunder, intensity) {
+        // intensity: 0.0 ~ 1.0
+        // 強さに応じてフィルタ周波数とレイヤーバランスを調整
+
+        if (layers.base) {
+          // ベース: 強いほどローパス周波数を上げ（音がブライトに）
+          const lpFreq = 400 + intensity * 800;   // 400Hz ~ 1200Hz
+          const hpFreq = 60 + intensity * 80;     // 60Hz ~ 140Hz
+          layers.base.filters[0].frequency.setTargetAtTime(lpFreq, layers.base.source.context.currentTime, 0.3);
+          layers.base.filters[1].frequency.setTargetAtTime(hpFreq, layers.base.source.context.currentTime, 0.3);
+        }
+
+        if (layers.detail) {
+          // ディテール: 強いほど帯域が広がり粒感が増す
+          const bpFreq = 1500 + intensity * 2000;  // 1500Hz ~ 3500Hz
+          const bpQ = 1.2 - intensity * 0.8;       // Q: 1.2 ~ 0.4（広帯域化）
+          layers.detail.filters[0].frequency.setTargetAtTime(bpFreq, layers.detail.source.context.currentTime, 0.3);
+          layers.detail.filters[0].Q.setTargetAtTime(bpQ, layers.detail.source.context.currentTime, 0.3);
+        }
+
+        if (layers.splash) {
+          // 水しぶき: 強いほどハイパス周波数を下げ（広域に）
+          const hpFreq = 6000 - intensity * 2000;  // 6000Hz ~ 4000Hz
+          layers.splash.filters[0].frequency.setTargetAtTime(hpFreq, layers.splash.source.context.currentTime, 0.3);
+        }
+
+        if (layers.drop) {
+          // 雨粒パチパチ: 強いほど発火間隔が短い（密度が上がる）
+          layers.drop.dropInterval = 0.02 + (1 - intensity) * 0.16; // 0.02s〜0.18s
+        }
+
+        if (thunder) {
+          // 遠雷: 強いほど頻度が上がる
+          thunder.thunderInterval = 10 + (1 - intensity) * 50; // 10s〜60s
+        }
+      }
+
+      /* =========================================================
+       *  UI 制御
+       * ========================================================= */
+      const startBtn = document.getElementById('start');
+      const stopBtn = document.getElementById('stop');
+      const statusEl = document.getElementById('status');
+      const thunderStartBtn = document.getElementById('thunderStart');
+      const thunderStopBtn = document.getElementById('thunderStop');
+      const thunderStatusEl = document.getElementById('thunderStatus');
+
+      const baseGainSlider = document.getElementById('baseGain');
+      const detailGainSlider = document.getElementById('detailGain');
+      const splashGainSlider = document.getElementById('splashGain');
+      const dropGainSlider = document.getElementById('dropGain');
+      const thunderGainSlider = document.getElementById('thunderGain');
+      const thunderFreqSlider = document.getElementById('thunderFreq');
+      const masterVolumeSlider = document.getElementById('masterVolume');
+      const intensitySlider = document.getElementById('intensity');
+
+      const baseGainVal = document.getElementById('baseGainVal');
+      const detailGainVal = document.getElementById('detailGainVal');
+      const splashGainVal = document.getElementById('splashGainVal');
+      const dropGainValEl = document.getElementById('dropGainVal');
+      const thunderGainVal = document.getElementById('thunderGainVal');
+      const thunderFreqVal = document.getElementById('thunderFreqVal');
+      const masterVolumeVal = document.getElementById('masterVolumeVal');
+      const intensityVal = document.getElementById('intensityVal');
+
+      // 雨音用
+      let audioCtx = null;
+      let masterGain = null;
+      let layers = {};
+      let isPlaying = false;
+
+      // 遠雷用（独立AudioContext）
+      let thunderCtx = null;
+      let thunderMasterGain = null;
+      let thunderLayer = null;
+      let isThunderPlaying = false;
+
+      // ========== 雨音 ==========
+      function start() {
+        if (isPlaying) return;
+
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        masterGain = audioCtx.createGain();
+        masterGain.gain.value = 0;
+        masterGain.connect(audioCtx.destination);
+
+        // 雨音レイヤーを構築
+        layers.base = createBaseRainLayer(audioCtx, masterGain);
+        layers.detail = createDetailLayer(audioCtx, masterGain);
+        layers.splash = createSplashLayer(audioCtx, masterGain);
+        layers.drop = createDropImpactLayer(audioCtx, masterGain);
+
+        // スライダー値を反映
+        updateRainLayerGains();
+        applyIntensity(layers, null, intensitySlider.value / 100);
+
+        // フェードイン
+        const vol = masterVolumeSlider.value / 100;
+        const now = audioCtx.currentTime;
+        masterGain.gain.setValueAtTime(0, now);
+        masterGain.gain.linearRampToValueAtTime(vol, now + 1.0);
+
+        isPlaying = true;
+        statusEl.textContent = '雨音: 再生中';
+      }
+
+      function stop() {
+        if (!isPlaying || !audioCtx) return;
+
+        const now = audioCtx.currentTime;
+        masterGain.gain.setValueAtTime(masterGain.gain.value, now);
+        masterGain.gain.linearRampToValueAtTime(0, now + 1.0);
+
+        setTimeout(() => {
+          for (const key of Object.keys(layers)) {
+            const l = layers[key];
+            if (l) {
+              try { l.source && l.source.stop(); } catch (_) { }
+              try { l.lfo && l.lfo.stop(); } catch (_) { }
+              try { l.stop && l.stop(); } catch (_) { }
+            }
+          }
+          layers = {};
+          if (audioCtx) {
+            audioCtx.close();
+            audioCtx = null;
+          }
+          masterGain = null;
+          isPlaying = false;
+          statusEl.textContent = '雨音: 停止中';
+        }, 1100);
+
+        statusEl.textContent = '雨音: フェードアウト中…';
+      }
+
+      // ========== 遠雷 ==========
+      function startThunder() {
+        if (isThunderPlaying) return;
+
+        thunderCtx = new (window.AudioContext || window.webkitAudioContext)();
+        thunderMasterGain = thunderCtx.createGain();
+        thunderMasterGain.gain.value = 0;
+        thunderMasterGain.connect(thunderCtx.destination);
+
+        thunderLayer = createThunderLayer(thunderCtx, thunderMasterGain);
+
+        // スライダー値を反映
+        updateThunderGain();
+        thunderLayer.thunderInterval = parseFloat(thunderFreqSlider.value);
+
+        // フェードイン
+        const vol = thunderGainSlider.value / 100;
+        const now = thunderCtx.currentTime;
+        thunderMasterGain.gain.setValueAtTime(0, now);
+        thunderMasterGain.gain.linearRampToValueAtTime(vol, now + 1.0);
+
+        isThunderPlaying = true;
+        thunderStatusEl.textContent = '遠雷: 再生中';
+      }
+
+      function stopThunder() {
+        if (!isThunderPlaying || !thunderCtx) return;
+
+        const now = thunderCtx.currentTime;
+        thunderMasterGain.gain.setValueAtTime(thunderMasterGain.gain.value, now);
+        thunderMasterGain.gain.linearRampToValueAtTime(0, now + 1.0);
+
+        setTimeout(() => {
+          if (thunderLayer) {
+            try { thunderLayer.stop && thunderLayer.stop(); } catch (_) { }
+            thunderLayer = null;
+          }
+          if (thunderCtx) {
+            thunderCtx.close();
+            thunderCtx = null;
+          }
+          thunderMasterGain = null;
+          isThunderPlaying = false;
+          thunderStatusEl.textContent = '遠雷: 停止中';
+        }, 1100);
+
+        thunderStatusEl.textContent = '遠雷: フェードアウト中…';
+      }
+
+      function updateRainLayerGains() {
+        if (!audioCtx) return;
+        if (layers.base) {
+          layers.base.gain.gain.setTargetAtTime(baseGainSlider.value / 100, audioCtx.currentTime, 0.1);
+        }
+        if (layers.detail) {
+          layers.detail.gain.gain.setTargetAtTime(detailGainSlider.value / 100, audioCtx.currentTime, 0.1);
+        }
+        if (layers.splash) {
+          layers.splash.gain.gain.setTargetAtTime(splashGainSlider.value / 100, audioCtx.currentTime, 0.1);
+        }
+        if (layers.drop) {
+          layers.drop.gain.gain.setTargetAtTime(dropGainSlider.value / 100, audioCtx.currentTime, 0.1);
+        }
+      }
+
+      function updateThunderGain() {
+        if (thunderMasterGain && thunderCtx) {
+          thunderMasterGain.gain.setTargetAtTime(thunderGainSlider.value / 100, thunderCtx.currentTime, 0.1);
+        }
+      }
+
+      // イベントリスナー
+      startBtn.addEventListener('click', start);
+      stopBtn.addEventListener('click', stop);
+      thunderStartBtn.addEventListener('click', startThunder);
+      thunderStopBtn.addEventListener('click', stopThunder);
+
+      baseGainSlider.addEventListener('input', () => {
+        baseGainVal.textContent = `${baseGainSlider.value}%`;
+        updateRainLayerGains();
+      });
+      detailGainSlider.addEventListener('input', () => {
+        detailGainVal.textContent = `${detailGainSlider.value}%`;
+        updateRainLayerGains();
+      });
+      splashGainSlider.addEventListener('input', () => {
+        splashGainVal.textContent = `${splashGainSlider.value}%`;
+        updateRainLayerGains();
+      });
+      dropGainSlider.addEventListener('input', () => {
+        dropGainValEl.textContent = `${dropGainSlider.value}%`;
+        updateRainLayerGains();
+      });
+      thunderGainSlider.addEventListener('input', () => {
+        thunderGainVal.textContent = `${thunderGainSlider.value}%`;
+        updateThunderGain();
+      });
+      thunderFreqSlider.addEventListener('input', () => {
+        thunderFreqVal.textContent = `${thunderFreqSlider.value}秒`;
+        if (thunderLayer) {
+          thunderLayer.thunderInterval = parseFloat(thunderFreqSlider.value);
+        }
+      });
+      masterVolumeSlider.addEventListener('input', () => {
+        masterVolumeVal.textContent = `${masterVolumeSlider.value}%`;
+        if (masterGain && audioCtx) {
+          masterGain.gain.setTargetAtTime(masterVolumeSlider.value / 100, audioCtx.currentTime, 0.1);
+        }
+      });
+      intensitySlider.addEventListener('input', () => {
+        intensityVal.textContent = `${intensitySlider.value}%`;
+        applyIntensity(layers, null, intensitySlider.value / 100);
+      });
+
+      /* =========================================================
+       *  スリープタイマー
+       * ========================================================= */
+      const timer15Btn = document.getElementById('timer15');
+      const timer30Btn = document.getElementById('timer30');
+      const timer60Btn = document.getElementById('timer60');
+      const timerCancelBtn = document.getElementById('timerCancel');
+      const timerDisplay = document.getElementById('timerDisplay');
+
+      let sleepTimerId = null;
+      let sleepCountdownId = null;
+      let sleepEndTime = null;
+
+      function formatRemaining(ms) {
+        const totalSec = Math.ceil(ms / 1000);
+        const m = Math.floor(totalSec / 60);
+        const s = totalSec % 60;
+        return `${m}:${s.toString().padStart(2, '0')}`;
+      }
+
+      function clearSleepTimer() {
+        if (sleepTimerId) { clearTimeout(sleepTimerId); sleepTimerId = null; }
+        if (sleepCountdownId) { clearInterval(sleepCountdownId); sleepCountdownId = null; }
+        sleepEndTime = null;
+        timerDisplay.textContent = '';
+        [timer15Btn, timer30Btn, timer60Btn].forEach(b => b.classList.remove('active'));
+      }
+
+      function setSleepTimer(minutes, btn) {
+        clearSleepTimer();
+        const ms = minutes * 60 * 1000;
+        sleepEndTime = Date.now() + ms;
+        btn.classList.add('active');
+
+        // カウントダウン表示
+        timerDisplay.textContent = formatRemaining(ms);
+        sleepCountdownId = setInterval(() => {
+          const remaining = sleepEndTime - Date.now();
+          if (remaining <= 0) {
+            timerDisplay.textContent = '0:00';
+            clearInterval(sleepCountdownId);
+            sleepCountdownId = null;
+          } else {
+            timerDisplay.textContent = formatRemaining(remaining);
+          }
+        }, 1000);
+
+        // 時間経過後に停止
+        sleepTimerId = setTimeout(() => {
+          stop();
+          stopThunder();
+          clearSleepTimer();
+        }, ms);
+      }
+
+      timer15Btn.addEventListener('click', () => setSleepTimer(15, timer15Btn));
+      timer30Btn.addEventListener('click', () => setSleepTimer(30, timer30Btn));
+      timer60Btn.addEventListener('click', () => setSleepTimer(60, timer60Btn));
+      timerCancelBtn.addEventListener('click', clearSleepTimer);
+
+      window.addEventListener('unload', () => {
+        clearSleepTimer();
+        if (audioCtx) audioCtx.close();
+        if (thunderCtx) thunderCtx.close();
+      });
+    })();
+  </script>
+</body>
+
+</html>
