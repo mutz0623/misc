@@ -1,0 +1,639 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Brown Noise Rain Prototype</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #0b1015;
+      --panel: #121922;
+      --panel2: #18222d;
+      --text: #e8eef5;
+      --muted: #95a7b8;
+      --accent: #7dc4ff;
+      --border: #263342;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background:
+        radial-gradient(circle at 50% 0%, #172332 0%, transparent 45%),
+        linear-gradient(#0b1015, #091016);
+      color: var(--text);
+      display: grid;
+      place-items: center;
+      padding: 24px;
+    }
+    .app {
+      width: min(760px, 100%);
+      background: color-mix(in srgb, var(--panel) 92%, transparent);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 22px;
+      box-shadow: 0 24px 70px rgba(0,0,0,.35);
+      backdrop-filter: blur(10px);
+    }
+    h1 {
+      margin: 0 0 6px;
+      font-size: clamp(24px, 5vw, 38px);
+      letter-spacing: -.03em;
+    }
+    .lead {
+      color: var(--muted);
+      margin: 0 0 22px;
+      line-height: 1.6;
+    }
+    .topbar {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      flex-wrap: wrap;
+      margin-bottom: 22px;
+    }
+    button {
+      border: 0;
+      border-radius: 999px;
+      padding: 12px 18px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: .18s ease;
+    }
+    #toggle {
+      background: var(--accent);
+      color: #07111a;
+      min-width: 112px;
+    }
+    #toggle:hover { transform: translateY(-1px); filter: brightness(1.06); }
+    .status {
+      color: var(--muted);
+      font-size: 14px;
+    }
+    .meter {
+      margin-left: auto;
+      width: 160px;
+      height: 8px;
+      border-radius: 999px;
+      overflow: hidden;
+      background: #0a0f14;
+      border: 1px solid var(--border);
+    }
+    .meter > i {
+      display: block;
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #78bfff, #c4e7ff);
+      transition: width .12s linear;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0,1fr));
+      gap: 14px;
+    }
+    .control {
+      background: var(--panel2);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 14px;
+    }
+    .control header {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 10px;
+      font-size: 14px;
+    }
+    .control header span:last-child {
+      color: var(--accent);
+      font-variant-numeric: tabular-nums;
+    }
+    input[type="range"] {
+      width: 100%;
+      accent-color: var(--accent);
+    }
+    .hint {
+      margin-top: 18px;
+      padding: 14px 16px;
+      border-radius: 14px;
+      background: #0d141c;
+      border: 1px dashed var(--border);
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.6;
+    }
+    .preset-btn {
+      border-radius: 999px;
+      padding: 12px 18px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: .18s ease;
+      border: 1px solid var(--border);
+      background: var(--panel2);
+      color: var(--text);
+      flex: 1;
+      min-width: 120px;
+    }
+    .preset-btn:hover {
+      background: color-mix(in srgb, var(--panel2) 80%, var(--accent));
+      transform: translateY(-1px);
+    }
+    @media (max-width: 640px) {
+      .grid { grid-template-columns: 1fr; }
+      .meter { width: 100%; margin-left: 0; }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <h1>Brown Noise Rain</h1>
+    <p class="lead">
+      ブラウンノイズを空間に広げ、短いノイズ粒をランダム配置して雨っぽい質感を作ります。
+      作業中のバックグラウンドとして。ヘッドホン推奨。
+    </p>
+
+    <div class="topbar">
+      <button id="toggle">▶ Start</button>
+      <span class="status" id="status">停止中</span>
+      <div class="meter" aria-hidden="true"><i id="meterBar"></i></div>
+    </div>
+
+    <div style="display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap;">
+      <button id="presetLight" class="preset-btn">🌧 小雨</button>
+      <button id="presetMedium" class="preset-btn">🌧🌧 中雨</button>
+      <button id="presetHeavy" class="preset-btn">⛈ 豪雨</button>
+    </div>
+
+    <div style="display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap;">
+      <button id="timer5" class="preset-btn" style="background: var(--panel); font-size: 13px;">⏱ 5分</button>
+      <button id="timer10" class="preset-btn" style="background: var(--panel); font-size: 13px;">⏱ 10分</button>
+      <button id="timer15" class="preset-btn" style="background: var(--panel); font-size: 13px;">⏱ 15分</button>
+      <button id="timer30" class="preset-btn" style="background: var(--panel); font-size: 13px;">⏱ 30分</button>
+      <button id="timer60" class="preset-btn" style="background: var(--panel); font-size: 13px;">⏱ 60分</button>
+      <span id="timerDisplay" class="status" style="margin-left: auto;">─</span>
+    </div>
+
+    <section class="grid">
+      <label class="control">
+        <header><span>Rain intensity</span><span id="intensityOut">58</span></header>
+        <input id="intensity" type="range" min="0" max="100" value="58">
+      </label>
+
+      <label class="control">
+        <header><span>Stereo width</span><span id="widthOut">78</span></header>
+        <input id="width" type="range" min="0" max="100" value="78">
+      </label>
+
+      <label class="control">
+        <header><span>Droplet density</span><span id="densityOut">62</span></header>
+        <input id="density" type="range" min="0" max="100" value="62">
+      </label>
+
+      <label class="control">
+        <header><span>Brightness</span><span id="brightnessOut">54</span></header>
+        <input id="brightness" type="range" min="0" max="100" value="54">
+      </label>
+
+      <label class="control">
+        <header><span>Position drift</span><span id="driftOut">42</span></header>
+        <input id="drift" type="range" min="0" max="100" value="42">
+      </label>
+
+      <label class="control">
+        <header><span>Master volume</span><span id="volumeOut">46</span></header>
+        <input id="volume" type="range" min="0" max="100" value="46">
+      </label>
+    </section>
+
+    <div class="hint">
+      3つの周波数帯（高・中・低）の雨粒を同時生成。ベース層＋低周波環境音で奥行きを表現。
+      スペースキーで再生/停止。プリセットから環境を選ぶか、スライダーで細かく調整できます。
+    </div>
+  </main>
+
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+
+  const ui = {
+    toggle: $("toggle"),
+    status: $("status"),
+    timerDisplay: $("timerDisplay"),
+    meterBar: $("meterBar"),
+    intensity: $("intensity"),
+    width: $("width"),
+    density: $("density"),
+    brightness: $("brightness"),
+    drift: $("drift"),
+    volume: $("volume"),
+  };
+
+  for (const key of ["intensity","width","density","brightness","drift","volume"]) {
+    const out = $(key + "Out");
+    ui[key].addEventListener("input", () => out.textContent = ui[key].value);
+  }
+
+  const presets = {
+    light: { intensity: 25, width: 72, density: 35, brightness: 62, drift: 30, volume: 35 },
+    medium: { intensity: 52, width: 76, density: 55, brightness: 54, drift: 40, volume: 45 },
+    heavy: { intensity: 75, width: 80, density: 75, brightness: 48, drift: 48, volume: 60 }
+  };
+
+  function applyPreset(preset) {
+    for (const [key, val] of Object.entries(preset)) {
+      ui[key].value = val;
+      $(key + "Out").textContent = val;
+    }
+    if (running && ctx) fadeUpdateBase();
+  }
+
+  $("presetLight").addEventListener("click", () => applyPreset(presets.light));
+  $("presetMedium").addEventListener("click", () => applyPreset(presets.medium));
+  $("presetHeavy").addEventListener("click", () => applyPreset(presets.heavy));
+
+  function setTimer(minutes) {
+    if (!running || !ctx) return;
+    timerEndTime = ctx.currentTime + minutes * 60;
+    updateTimerDisplay();
+    startTimerLoop();
+  }
+
+  $("timer5").addEventListener("click", () => setTimer(5));
+  $("timer10").addEventListener("click", () => setTimer(10));
+  $("timer15").addEventListener("click", () => setTimer(15));
+  $("timer30").addEventListener("click", () => setTimer(30));
+  $("timer60").addEventListener("click", () => setTimer(60));
+
+  let ctx = null;
+  let master = null;
+  let analyser = null;
+  let baseLayers = [];
+  let dropletTimers = [];
+  let driftTimer = null;
+  let raf = null;
+  let running = false;
+  let timerEndTime = null;
+  let timerLoop = null;
+  let fadeTimeout = null;
+
+  function value(name) {
+    return Number(ui[name].value) / 100;
+  }
+
+  function makeBrownBuffer(seconds = 8) {
+    const sr = ctx.sampleRate;
+    const length = Math.floor(sr * seconds);
+    const buffer = ctx.createBuffer(1, length, sr);
+    const data = buffer.getChannelData(0);
+
+    let last = 0;
+    for (let i = 0; i < length; i++) {
+      const white = Math.random() * 2 - 1;
+      last = (last + 0.018 * white) / 1.018;
+      data[i] = last * 3.2;
+    }
+
+    let mean = 0;
+    for (let i = 0; i < length; i++) mean += data[i];
+    mean /= length;
+    for (let i = 0; i < length; i++) data[i] -= mean;
+
+    return buffer;
+  }
+
+  function makeNoiseBuffer(seconds = 1.0) {
+    const sr = ctx.sampleRate;
+    const length = Math.floor(sr * seconds);
+    const buffer = ctx.createBuffer(1, length, sr);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < length; i++) {
+      data[i] = Math.random() * 2 - 1;
+    }
+    return buffer;
+  }
+
+  let dropletNoise = null;
+
+  function createBaseLayer(initialPan) {
+    const src = ctx.createBufferSource();
+    src.buffer = makeBrownBuffer(10 + Math.random() * 4);
+    src.loop = true;
+
+    const hp = ctx.createBiquadFilter();
+    hp.type = "highpass";
+    hp.frequency.value = 180 + value("brightness") * 520;
+    hp.Q.value = 0.55;
+
+    const lp = ctx.createBiquadFilter();
+    lp.type = "lowpass";
+    lp.frequency.value = 2500 + value("brightness") * 6500;
+    lp.Q.value = 0.35;
+
+    const pan = ctx.createStereoPanner();
+    pan.pan.value = initialPan;
+
+    const gain = ctx.createGain();
+    gain.gain.value = 0.12;
+
+    src.connect(hp).connect(lp).connect(pan).connect(gain).connect(master);
+    src.start();
+
+    return { src, hp, lp, pan, gain, anchor: initialPan };
+  }
+
+  function createAmbientLow() {
+    const src = ctx.createBufferSource();
+    src.buffer = makeBrownBuffer(12 + Math.random() * 5);
+    src.loop = true;
+
+    const lp = ctx.createBiquadFilter();
+    lp.type = "lowpass";
+    lp.frequency.value = 120;
+    lp.Q.value = 0.5;
+
+    const gain = ctx.createGain();
+    gain.gain.value = 0.015;
+
+    src.connect(lp).connect(gain).connect(master);
+    src.start();
+
+    return { src, lp, gain };
+  }
+
+  function updateBase() {
+    const intensity = value("intensity");
+    const bright = value("brightness");
+    const width = value("width");
+
+    const now = ctx.currentTime;
+    for (const layer of baseLayers) {
+      layer.gain.gain.setTargetAtTime(0.025 + intensity * 0.15, now, 0.08);
+      layer.hp.frequency.setTargetAtTime(160 + bright * 520, now, 0.08);
+      layer.lp.frequency.setTargetAtTime(2500 + bright * 7000, now, 0.08);
+      layer.anchor = Math.sign(layer.anchor || 1) * (0.1 + width * 0.9);
+    }
+
+    master.gain.setTargetAtTime(0.03 + value("volume") * 0.42, now, 0.08);
+  }
+
+  function fadeUpdateBase() {
+    clearTimeout(fadeTimeout);
+    const intensity = value("intensity");
+    const bright = value("brightness");
+    const width = value("width");
+    const now = ctx.currentTime;
+
+    for (const layer of baseLayers) {
+      layer.gain.gain.setTargetAtTime(0.025 + intensity * 0.15, now, 0.12);
+      layer.hp.frequency.setTargetAtTime(160 + bright * 520, now, 0.12);
+      layer.lp.frequency.setTargetAtTime(2500 + bright * 7000, now, 0.12);
+      layer.anchor = Math.sign(layer.anchor || 1) * (0.1 + width * 0.9);
+    }
+
+    master.gain.setTargetAtTime(0.03 + value("volume") * 0.42, now, 0.12);
+  }
+
+  function spawnDropletLayer(freqBand) {
+    if (!running || !ctx) return;
+
+    const density = value("density");
+    const intensity = value("intensity");
+    const width = value("width");
+    const bright = value("brightness");
+
+    const src = ctx.createBufferSource();
+    src.buffer = dropletNoise;
+
+    const bp = ctx.createBiquadFilter();
+    bp.type = "bandpass";
+
+    const minF = freqBand.min + bright * freqBand.minAdd;
+    const maxF = freqBand.max + bright * freqBand.maxAdd;
+    const logF = Math.exp(
+      Math.log(minF) + Math.random() * (Math.log(maxF) - Math.log(minF))
+    );
+    bp.frequency.value = logF;
+    bp.Q.value = 0.7 + Math.random() * 2.0;
+
+    const hp = ctx.createBiquadFilter();
+    hp.type = "highpass";
+    hp.frequency.value = freqBand.highpass + bright * 800;
+
+    const pan = ctx.createStereoPanner();
+    pan.pan.value = (Math.random() * 2 - 1) * (0.15 + width * 0.85);
+
+    const gain = ctx.createGain();
+    const now = ctx.currentTime;
+    const dur = 0.02 + Math.random() * (0.03 + (1 - density) * 0.08);
+    const amp = (0.006 + Math.random() * 0.026) * (0.35 + intensity * 1.15) * freqBand.ampMul;
+
+    gain.gain.setValueAtTime(0.0001, now);
+    gain.gain.exponentialRampToValueAtTime(Math.max(0.0002, amp), now + 0.004);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + dur);
+
+    src.connect(bp).connect(hp).connect(pan).connect(gain).connect(master);
+    src.start(now, Math.random() * 0.7, dur + 0.03);
+    src.stop(now + dur + 0.04);
+  }
+
+  function scheduleDropletLayer(freqBand) {
+    if (!running) return;
+
+    spawnDropletLayer(freqBand);
+
+    const d = value("density");
+    const rate = (3 + d * 38) * freqBand.rateMul;
+    const u = Math.max(0.0001, Math.random());
+    let ms = (-Math.log(u) / rate) * 1000;
+
+    ms = Math.max(12, Math.min(900, ms));
+
+    const timer = setTimeout(() => scheduleDropletLayer(freqBand), ms);
+    dropletTimers.push(timer);
+    if (dropletTimers.length > 100) dropletTimers.shift();
+  }
+
+  const freqBands = [
+    { name: "high", min: 2500, minAdd: 1200, max: 6500, maxAdd: 8500, highpass: 1500, ampMul: 1.2, rateMul: 1.3 },
+    { name: "mid", min: 800, minAdd: 500, max: 2500, maxAdd: 3500, highpass: 400, ampMul: 0.95, rateMul: 0.95 },
+    { name: "low", min: 200, minAdd: 100, max: 900, maxAdd: 1200, highpass: 100, ampMul: 0.6, rateMul: 0.45 }
+  ];
+
+  function updateDrift() {
+    if (!running || !ctx) return;
+
+    const amount = value("drift");
+    const width = value("width");
+    const now = ctx.currentTime;
+
+    for (const layer of baseLayers) {
+      const wander = (Math.random() * 2 - 1) * amount * 0.55;
+      let target = layer.anchor + wander;
+      const maxPan = 0.15 + width * 0.85;
+      target = Math.max(-maxPan, Math.min(maxPan, target));
+      layer.pan.pan.linearRampToValueAtTime(target, now + 1.8 + Math.random() * 2.8);
+    }
+
+    driftTimer = setTimeout(updateDrift, 900 + Math.random() * 1800);
+  }
+
+  function updateMeter() {
+    if (!running || !analyser) return;
+    const data = new Uint8Array(analyser.fftSize);
+    analyser.getByteTimeDomainData(data);
+
+    let sum = 0;
+    for (let i = 0; i < data.length; i++) {
+      const x = (data[i] - 128) / 128;
+      sum += x * x;
+    }
+    const rms = Math.sqrt(sum / data.length);
+    ui.meterBar.style.width = Math.min(100, rms * 260) + "%";
+    raf = requestAnimationFrame(updateMeter);
+  }
+
+  function updateTimerDisplay() {
+    if (!timerEndTime) {
+      ui.timerDisplay.textContent = "─";
+      return;
+    }
+    const remaining = Math.max(0, timerEndTime - ctx.currentTime);
+    const mins = Math.floor(remaining / 60);
+    const secs = Math.floor(remaining % 60);
+    ui.timerDisplay.textContent = `${mins}:${secs.toString().padStart(2, "0")}`;
+  }
+
+  function startTimerLoop() {
+    clearInterval(timerLoop);
+    timerLoop = setInterval(() => {
+      if (!running || !timerEndTime) {
+        clearInterval(timerLoop);
+        return;
+      }
+      const remaining = timerEndTime - ctx.currentTime;
+      if (remaining <= 0) {
+        clearInterval(timerLoop);
+        fadeStop();
+      } else {
+        updateTimerDisplay();
+      }
+    }, 200);
+  }
+
+  let ambientLow = null;
+
+  async function fadeStart() {
+    const now = ctx.currentTime;
+    master.gain.setValueAtTime(0.0001, now);
+    master.gain.exponentialRampToValueAtTime(0.03 + value("volume") * 0.42, now + 0.8);
+  }
+
+  async function fadeStop() {
+    const now = ctx.currentTime;
+    master.gain.setValueAtTime(master.gain.value, now);
+    master.gain.exponentialRampToValueAtTime(0.0001, now + 1.2);
+
+    fadeTimeout = setTimeout(async () => {
+      running = false;
+      dropletTimers.forEach(clearTimeout);
+      dropletTimers = [];
+      clearTimeout(driftTimer);
+      clearInterval(timerLoop);
+      cancelAnimationFrame(raf);
+
+      ui.meterBar.style.width = "0%";
+      ui.toggle.textContent = "▶ Start";
+      ui.status.textContent = "停止中";
+      ui.timerDisplay.textContent = "─";
+      timerEndTime = null;
+
+      if (ctx) {
+        const oldCtx = ctx;
+        ctx = null;
+        try { await oldCtx.close(); } catch (_) {}
+      }
+
+      baseLayers = [];
+      ambientLow = null;
+      master = null;
+      analyser = null;
+    }, 1200);
+  }
+
+  async function start() {
+    if (running) return;
+
+    ctx = new (window.AudioContext || window.webkitAudioContext)();
+    await ctx.resume();
+
+    master = ctx.createGain();
+    master.gain.value = 0.0001;
+
+    analyser = ctx.createAnalyser();
+    analyser.fftSize = 256;
+
+    master.connect(analyser).connect(ctx.destination);
+
+    dropletNoise = makeNoiseBuffer(1.2);
+
+    const w = value("width");
+    baseLayers = [
+      createBaseLayer(-(0.15 + w * 0.85)),
+      createBaseLayer( +(0.15 + w * 0.85))
+    ];
+
+    ambientLow = createAmbientLow();
+
+    running = true;
+    updateBase();
+
+    ui.toggle.textContent = "■ Stop";
+    ui.status.textContent = "再生中";
+
+    for (const band of freqBands) {
+      scheduleDropletLayer(band);
+    }
+    updateDrift();
+    updateMeter();
+
+    fadeStart();
+
+    if (timerEndTime === null) {
+      ui.timerDisplay.textContent = "─";
+    } else {
+      startTimerLoop();
+    }
+  }
+
+  async function stop() {
+    if (!running) return;
+    await fadeStop();
+  }
+
+  ui.toggle.addEventListener("click", async () => {
+    if (running) await stop();
+    else await start();
+  });
+
+  for (const key of ["intensity","width","brightness","volume"]) {
+    ui[key].addEventListener("input", () => {
+      if (running && ctx) fadeUpdateBase();
+    });
+  }
+
+  window.addEventListener("keydown", (e) => {
+    if (e.code === "Space" && e.target === document.body) {
+      e.preventDefault();
+      ui.toggle.click();
+    }
+  });
+
+  window.addEventListener("beforeunload", () => {
+    if (ctx) ctx.close();
+  });
+})();
+</script>
+</body>
+</html>
