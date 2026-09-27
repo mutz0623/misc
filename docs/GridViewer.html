@@ -411,6 +411,130 @@
       { accuracy: 5, label: '1m',    color: '#9333ea', weight: 1,   opacity: 0.5, fillOpacity: 0.08 },
     ];
 
+    // ===== UTM <-> WGS84 conversion (Snyder/USGS transverse Mercator) =====
+    // MGRSのマスはUTM平面上の正方形であり、緯度経度平面では傾いた/湾曲した四角形になる。
+    // mgrsライブラリはこの変換を公開していないため、標準式を自前で実装する。
+    const UTM_A = 6378137;
+    const UTM_F = 1 / 298.257223563;
+    const UTM_K0 = 0.9996;
+    const UTM_E2 = UTM_F * (2 - UTM_F);
+    const UTM_EP2 = UTM_E2 / (1 - UTM_E2);
+    const CELL_SIZE_METERS = [100000, 10000, 1000, 100, 10, 1];
+
+    function utmZoneCentralMeridian(zoneNumber) {
+      return (zoneNumber - 1) * 6 - 180 + 3;
+    }
+
+    function latLonToUTM(lat, lon, zoneNumber) {
+      const a = UTM_A, e2 = UTM_E2, ep2 = UTM_EP2, k0 = UTM_K0;
+      const latRad = lat * Math.PI / 180;
+      const lonRad = lon * Math.PI / 180;
+      const lonOrigin = utmZoneCentralMeridian(zoneNumber) * Math.PI / 180;
+
+      const N = a / Math.sqrt(1 - e2 * Math.sin(latRad) ** 2);
+      const T = Math.tan(latRad) ** 2;
+      const C = ep2 * Math.cos(latRad) ** 2;
+      const A = Math.cos(latRad) * (lonRad - lonOrigin);
+
+      const M = a * (
+        (1 - e2 / 4 - 3 * e2 * e2 / 64 - 5 * e2 * e2 * e2 / 256) * latRad
+        - (3 * e2 / 8 + 3 * e2 * e2 / 32 + 45 * e2 * e2 * e2 / 1024) * Math.sin(2 * latRad)
+        + (15 * e2 * e2 / 256 + 45 * e2 * e2 * e2 / 1024) * Math.sin(4 * latRad)
+        - (35 * e2 * e2 * e2 / 3072) * Math.sin(6 * latRad)
+      );
+
+      const easting = k0 * N * (
+        A + (1 - T + C) * A ** 3 / 6
+        + (5 - 18 * T + T * T + 72 * C - 58 * ep2) * A ** 5 / 120
+      ) + 500000;
+
+      let northing = k0 * (
+        M + N * Math.tan(latRad) * (
+          A * A / 2
+          + (5 - T + 9 * C + 4 * C * C) * A ** 4 / 24
+          + (61 - 58 * T + T * T + 600 * C - 330 * ep2) * A ** 6 / 720
+        )
+      );
+      if (lat < 0) northing += 10000000;
+
+      return [easting, northing];
+    }
+
+    function utmToLatLon(easting, northing, zoneNumber, isSouth) {
+      const a = UTM_A, e2 = UTM_E2, ep2 = UTM_EP2, k0 = UTM_K0;
+      const e1 = (1 - Math.sqrt(1 - e2)) / (1 + Math.sqrt(1 - e2));
+
+      const x = easting - 500000;
+      let y = northing;
+      if (isSouth) y -= 10000000;
+
+      const M = y / k0;
+      const mu = M / (a * (1 - e2 / 4 - 3 * e2 * e2 / 64 - 5 * e2 * e2 * e2 / 256));
+
+      const phi1 = mu
+        + (3 * e1 / 2 - 27 * e1 ** 3 / 32) * Math.sin(2 * mu)
+        + (21 * e1 * e1 / 16 - 55 * e1 ** 4 / 32) * Math.sin(4 * mu)
+        + (151 * e1 ** 3 / 96) * Math.sin(6 * mu)
+        + (1097 * e1 ** 4 / 512) * Math.sin(8 * mu);
+
+      const N1 = a / Math.sqrt(1 - e2 * Math.sin(phi1) ** 2);
+      const T1 = Math.tan(phi1) ** 2;
+      const C1 = ep2 * Math.cos(phi1) ** 2;
+      const R1 = a * (1 - e2) / Math.pow(1 - e2 * Math.sin(phi1) ** 2, 1.5);
+      const D = x / (N1 * k0);
+
+      const lat = phi1 - (N1 * Math.tan(phi1) / R1) * (
+        D * D / 2
+        - (5 + 3 * T1 + 10 * C1 - 4 * C1 * C1 - 9 * ep2) * D ** 4 / 24
+        + (61 + 90 * T1 + 298 * C1 + 45 * T1 * T1 - 252 * ep2 - 3 * C1 * C1) * D ** 6 / 720
+      );
+
+      const lon = lonOriginFromZone(zoneNumber) + (
+        D
+        - (1 + 2 * T1 + C1) * D ** 3 / 6
+        + (5 - 2 * C1 + 28 * T1 - 3 * C1 * C1 + 8 * ep2 + 24 * T1 * T1) * D ** 5 / 120
+      ) / Math.cos(phi1);
+
+      return [lat * 180 / Math.PI, lon * 180 / Math.PI];
+    }
+
+    function lonOriginFromZone(zoneNumber) {
+      return utmZoneCentralMeridian(zoneNumber) * Math.PI / 180;
+    }
+
+    // MGRS文字列の先頭からUTMゾーン番号とゾーン文字(南北半球)を取得
+    function parseZoneFromMgrs(mgrsStr) {
+      const m = /^(\d{1,2})([A-Za-z])/.exec(mgrsStr);
+      if (!m) return null;
+      const zoneNumber = parseInt(m[1], 10);
+      const zoneLetter = m[2].toUpperCase();
+      return { zoneNumber, isSouth: zoneLetter < 'N' };
+    }
+
+    // セルの南西角(正確な緯度経度)からUTM平面上で四隅を作り、辺を分割して緯度経度に戻す
+    function buildGridRing(mgrsStr, swLon, swLat, sizeMeters, edgeSegments) {
+      const zone = parseZoneFromMgrs(mgrsStr);
+      if (!zone) return null;
+
+      const [e0, n0] = latLonToUTM(swLat, swLon, zone.zoneNumber);
+      const pts = [];
+      const addEdge = (e1, n1, e2, n2) => {
+        for (let i = 0; i < edgeSegments; i++) {
+          const t = i / edgeSegments;
+          const e = e1 + (e2 - e1) * t;
+          const n = n1 + (n2 - n1) * t;
+          pts.push(utmToLatLon(e, n, zone.zoneNumber, zone.isSouth));
+        }
+      };
+
+      addEdge(e0, n0, e0 + sizeMeters, n0);                               // 南辺: SW -> SE
+      addEdge(e0 + sizeMeters, n0, e0 + sizeMeters, n0 + sizeMeters);      // 東辺: SE -> NE
+      addEdge(e0 + sizeMeters, n0 + sizeMeters, e0, n0 + sizeMeters);      // 北辺: NE -> NW
+      addEdge(e0, n0 + sizeMeters, e0, n0);                                // 西辺: NW -> SW
+
+      return pts;
+    }
+
     // ===== Utilities =====
     const $ = sel => document.querySelector(sel);
 
@@ -472,11 +596,20 @@
         const cellMgrs = latLonToMGRS(center.lat, center.lng, level.accuracy);
         if (!cellMgrs) continue;
 
-        const bbox = getMGRSBBox(cellMgrs);
-        if (!bbox) continue;
+        let bbox;
+        try {
+          bbox = mgrs.inverse(cellMgrs); // [west, south, east, north]
+        } catch (e) {
+          continue;
+        }
 
-        const rect = L.rectangle(
-          [[bbox[1], bbox[0]], [bbox[3], bbox[2]]],
+        const sizeMeters = CELL_SIZE_METERS[level.accuracy];
+        const edgeSegments = level.accuracy <= 1 ? 8 : 1;
+        const ring = buildGridRing(cellMgrs, bbox[0], bbox[1], sizeMeters, edgeSegments);
+        if (!ring) continue;
+
+        const poly = L.polygon(
+          ring,
           {
             color: level.color,
             weight: level.weight,
@@ -487,7 +620,7 @@
             interactive: false,
           }
         ).addTo(map);
-        gridLayers.push(rect);
+        gridLayers.push(poly);
       }
     }
 
