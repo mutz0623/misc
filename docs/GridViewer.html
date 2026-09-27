@@ -104,6 +104,92 @@
       font-style: italic;
     }
 
+    /* MGRS コピー UI */
+    .mgrs-label-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .mgrs-copy-trigger,
+    .mgrs-copy-row-btn {
+      border: none;
+      background: transparent;
+      cursor: pointer;
+      font-size: 0.9rem;
+      line-height: 1;
+      padding: 2px 6px;
+      border-radius: 4px;
+      color: inherit;
+    }
+
+    .mgrs-copy-trigger:hover,
+    .mgrs-copy-row-btn:hover {
+      background: rgba(0, 0, 0, 0.08);
+    }
+
+    .mgrs-copy-popup {
+      position: absolute;
+      background: white;
+      border-radius: 12px;
+      padding: 12px 14px;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+      width: 220px;
+      z-index: 1500;
+    }
+
+    .mgrs-copy-popup-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: #666;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 8px;
+    }
+
+    .mgrs-copy-popup-close {
+      border: none;
+      background: transparent;
+      cursor: pointer;
+      font-size: 1rem;
+      line-height: 1;
+      color: #999;
+      padding: 0 2px;
+    }
+
+    .mgrs-copy-popup-list {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      font-family: 'Courier New', monospace;
+    }
+
+    .mgrs-copy-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      font-size: 0.85rem;
+    }
+
+    .mgrs-copy-row-label {
+      color: #666;
+      width: 44px;
+      flex-shrink: 0;
+    }
+
+    .mgrs-copy-row-code {
+      color: #667eea;
+      font-weight: 700;
+      flex: 1;
+      overflow-wrap: anywhere;
+    }
+
     /* MGRS グリッドのスタイル */
     .mgrs-grid {
       fill: none;
@@ -143,6 +229,28 @@
       .mgrs-grid-label {
         fill: rgba(102, 126, 234, 0.9);
         text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+      }
+
+      .mgrs-copy-trigger:hover,
+      .mgrs-copy-row-btn:hover {
+        background: rgba(255, 255, 255, 0.1);
+      }
+
+      .mgrs-copy-popup {
+        background: #1f2937;
+        color: #e5e7eb;
+      }
+
+      .mgrs-copy-popup-header {
+        color: #9ca3af;
+      }
+
+      .mgrs-copy-popup-close {
+        color: #9ca3af;
+      }
+
+      .mgrs-copy-row-label {
+        color: #9ca3af;
       }
     }
 
@@ -350,7 +458,10 @@
         <div class="info-value" id="zoom">-</div>
       </div>
       <div class="info-item" id="mgrsSection" style="display: none;">
-        <div class="info-label">🎯 MGRS グリッド</div>
+        <div class="info-label mgrs-label-row">
+          <span>🎯 MGRS グリッド</span>
+          <button id="mgrsCopyBtn" class="mgrs-copy-trigger" type="button" title="ズームレベル別MGRSコードをコピー">📋</button>
+        </div>
         <div class="info-value mgrs-value" id="mgrs">-</div>
       </div>
       <div class="info-item" id="mgrsGridSection" style="display: none;">
@@ -359,6 +470,13 @@
           <div id="mgrsGridBounds" style="line-height: 1.6;"></div>
         </div>
       </div>
+    </div>
+    <div id="mgrsCopyPopup" class="mgrs-copy-popup" style="display: none;">
+      <div class="mgrs-copy-popup-header">
+        <span>ズームレベル別 MGRS</span>
+        <button id="mgrsCopyPopupClose" class="mgrs-copy-popup-close" type="button" aria-label="閉じる">×</button>
+      </div>
+      <div id="mgrsCopyPopupList" class="mgrs-copy-popup-list"></div>
     </div>
   </div>
 
@@ -374,6 +492,7 @@
     let gpsAccuracyCircle = null;
     let trackingWatchId = null;
     let wakeLock = null;
+    let mgrsCopyPopupOpen = false;
     const mgrsAvailable = !!(window.mgrs && typeof window.mgrs.forward === 'function');
 
     // ===== Wake Lock =====
@@ -644,6 +763,7 @@
       if (!mgrsStr) {
         $('#mgrsSection').style.display = 'none';
         $('#mgrsGridSection').style.display = 'none';
+        closeMgrsCopyPopup();
         return;
       }
 
@@ -657,6 +777,56 @@
           `<strong>SW:</strong> ${bbox[1].toFixed(6)}, ${bbox[0].toFixed(6)}<br><strong>NE:</strong> ${bbox[3].toFixed(6)}, ${bbox[2].toFixed(6)}`;
       } else {
         $('#mgrsGridSection').style.display = 'none';
+      }
+    }
+
+    // ===== MGRS コピー ポップアップ =====
+
+    // 現在の中心座標について、GRID_LEVELS各段階のMGRSコードを取得
+    function getGridMgrsList() {
+      if (!mgrsAvailable) return [];
+      const center = map.getCenter();
+      return GRID_LEVELS
+        .map(level => ({ label: level.label, code: latLonToMGRS(center.lat, center.lng, level.accuracy) }))
+        .filter(item => item.code);
+    }
+
+    function renderMgrsCopyPopup() {
+      const list = getGridMgrsList();
+      $('#mgrsCopyPopupList').innerHTML = list.map(item => `
+        <div class="mgrs-copy-row">
+          <span class="mgrs-copy-row-label">${item.label}</span>
+          <span class="mgrs-copy-row-code">${item.code}</span>
+          <button class="mgrs-copy-row-btn" type="button" data-code="${item.code}" title="コピー">📋</button>
+        </div>
+      `).join('');
+    }
+
+    function openMgrsCopyPopup() {
+      const popup = $('#mgrsCopyPopup');
+      const btn = $('#mgrsCopyBtn');
+      const containerRect = $('#mapContainer').getBoundingClientRect();
+      const btnRect = btn.getBoundingClientRect();
+
+      renderMgrsCopyPopup();
+      popup.style.display = 'block';
+      popup.style.right = (containerRect.right - btnRect.right) + 'px';
+      popup.style.bottom = (containerRect.bottom - btnRect.top + 8) + 'px';
+      mgrsCopyPopupOpen = true;
+    }
+
+    function closeMgrsCopyPopup() {
+      if (!mgrsCopyPopupOpen) return;
+      $('#mgrsCopyPopup').style.display = 'none';
+      mgrsCopyPopupOpen = false;
+    }
+
+    async function copyTextToClipboard(text) {
+      try {
+        await navigator.clipboard.writeText(text);
+        return true;
+      } catch (e) {
+        return false;
       }
     }
 
@@ -711,6 +881,26 @@
 
       map.on('move', updateDisplay);
       map.on('zoom', updateDisplay);
+      map.on('movestart zoomstart', closeMgrsCopyPopup);
+
+      // MGRS コピー ポップアップの開閉・コピー操作
+      $('#mgrsCopyBtn').addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (mgrsCopyPopupOpen) {
+          closeMgrsCopyPopup();
+        } else {
+          openMgrsCopyPopup();
+        }
+      });
+      $('#mgrsCopyPopupClose').addEventListener('click', () => closeMgrsCopyPopup());
+      $('#mgrsCopyPopupList').addEventListener('click', async (e) => {
+        const btn = e.target.closest('.mgrs-copy-row-btn');
+        if (!btn) return;
+        const ok = await copyTextToClipboard(btn.dataset.code);
+        const original = btn.textContent;
+        btn.textContent = ok ? '✅' : '⚠️';
+        setTimeout(() => { btn.textContent = original; }, 1200);
+      });
 
       // 現在地コントロール（単発 / 追従）
       const LocateControl = L.Control.extend({
