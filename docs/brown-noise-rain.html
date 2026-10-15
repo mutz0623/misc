@@ -269,6 +269,11 @@
   let ctx = null;
   let master = null;
   let analyser = null;
+  let limiter = null;
+
+  function masterGainFor(volume) {
+    return 0.05 + volume * 1.45;
+  }
   let baseLayers = [];
   let dropletTimers = [];
   let driftTimer = null;
@@ -375,7 +380,7 @@
       layer.anchor = Math.sign(layer.anchor || 1) * (0.1 + width * 0.9);
     }
 
-    master.gain.setTargetAtTime(0.03 + value("volume") * 0.42, now, 0.08);
+    master.gain.setTargetAtTime(masterGainFor(value("volume")), now, 0.08);
   }
 
   function fadeUpdateBase() {
@@ -392,7 +397,7 @@
       layer.anchor = Math.sign(layer.anchor || 1) * (0.1 + width * 0.9);
     }
 
-    master.gain.setTargetAtTime(0.03 + value("volume") * 0.42, now, 0.12);
+    master.gain.setTargetAtTime(masterGainFor(value("volume")), now, 0.12);
   }
 
   function spawnDropletLayer(freqBand) {
@@ -527,7 +532,7 @@
   async function fadeStart() {
     const now = ctx.currentTime;
     master.gain.setValueAtTime(0.0001, now);
-    master.gain.exponentialRampToValueAtTime(0.03 + value("volume") * 0.42, now + 0.8);
+    master.gain.exponentialRampToValueAtTime(masterGainFor(value("volume")), now + 0.8);
   }
 
   async function fadeStop() {
@@ -559,6 +564,7 @@
       ambientLow = null;
       master = null;
       analyser = null;
+      limiter = null;
     }, 1200);
   }
 
@@ -574,7 +580,14 @@
     analyser = ctx.createAnalyser();
     analyser.fftSize = 256;
 
-    master.connect(analyser).connect(ctx.destination);
+    limiter = ctx.createDynamicsCompressor();
+    limiter.threshold.value = -12;
+    limiter.knee.value = 6;
+    limiter.ratio.value = 12;
+    limiter.attack.value = 0.003;
+    limiter.release.value = 0.25;
+
+    master.connect(analyser).connect(limiter).connect(ctx.destination);
 
     dropletNoise = makeNoiseBuffer(1.2);
 
